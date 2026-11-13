@@ -1,0 +1,5 @@
+# Respaldos descargados desde la app: contienen tus datos, no los subas
+mis-finanzas-*.json
+
+.DS_Store
+Thumbs.db

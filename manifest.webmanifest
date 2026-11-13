@@ -1,0 +1,14 @@
+{
+  "name": "Mis finanzas",
+  "short_name": "Finanzas",
+  "description": "Mis cuentas de la casa: préstamo, deudas, gastos y ahorro.",
+  "lang": "es-MX",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3ebdd",
+  "theme_color": "#f3ebdd",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
