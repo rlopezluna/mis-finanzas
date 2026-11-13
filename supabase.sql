@@ -21,6 +21,24 @@ create table if not exists public.app_state (
 alter table public.app_state drop constraint if exists app_state_objeto;
 alter table public.app_state add constraint app_state_objeto check (jsonb_typeof(value) = 'object');
 
+-- La hora de cada guardado ("t", en milisegundos) la pone el servidor, no el dispositivo:
+-- así un celular con el reloj mal no puede ganarle a cambios más nuevos. Siempre avanza.
+create or replace function private.sellar_hora()
+returns trigger language plpgsql set search_path = '' as $$
+declare ahora bigint := floor(extract(epoch from clock_timestamp()) * 1000);
+begin
+  if tg_op = 'UPDATE' and (old.value->>'t') ~ '^[0-9]+(\.[0-9]+)?$' then
+    ahora := greatest(ahora, floor((old.value->>'t')::numeric)::bigint + 1);
+  end if;
+  new.value := jsonb_set(new.value, '{t}', to_jsonb(ahora));
+  new.updated_at := now();
+  return new;
+end $$;
+revoke all on function private.sellar_hora() from public, anon, authenticated;
+drop trigger if exists app_state_sellar_hora on public.app_state;
+create trigger app_state_sellar_hora before insert or update on public.app_state
+  for each row execute function private.sellar_hora();
+
 -- Invitados: el invitado (viewer) ve y edita el préstamo del dueño (owner)
 create table if not exists public.shares (
   viewer_id  uuid primary key references auth.users(id) on delete cascade,
@@ -131,12 +149,17 @@ begin
       v := d || jsonb_build_object('pay', coalesce((select jsonb_agg(p - 'n' order by o)
              from jsonb_array_elements(coalesce(d->'pay', '[]'::jsonb)) with ordinality as y(p, o)), '[]'::jsonb));
     else
+      -- Solo los datos de la cuenta compartida: nunca saldos ni fechas de las otras cuentas
       m := substr(s.item, 6);
-      v := jsonb_build_object('m', m,
-        'cIni', b->'cIni', 'cDate', b->'cDate', 'dIni', b->'dIni', 'dDate', b->'dDate',
-        'vIni', b->'vIni', 'vDate', b->'vDate', 'vAmt', b->'vAmt',
-        'exp', coalesce((select jsonb_agg(e) from jsonb_array_elements(coalesce(b->'exp', '[]'::jsonb)) e where e->>'m' = m), '[]'::jsonb),
-        'inc', coalesce((select jsonb_agg(e) from jsonb_array_elements(coalesce(b->'inc', '[]'::jsonb)) e where e->>'m' = m), '[]'::jsonb));
+      v := jsonb_build_object('m', m) || case m
+        when 'v' then jsonb_build_object('vIni', b->'vIni', 'vDate', b->'vDate', 'vAmt', b->'vAmt')
+        when 'e' then jsonb_build_object('cIni', b->'cIni', 'cDate', b->'cDate')
+        when 'd' then jsonb_build_object('dIni', b->'dIni', 'dDate', b->'dDate')
+        else '{}'::jsonb end || jsonb_build_object(
+        'exp', coalesce((select jsonb_agg(jsonb_build_object('m', e->'m', 'a', e->'a', 'd', e->'d', 'n', e->'n', 'c', e->'c'))
+                 from jsonb_array_elements(coalesce(b->'exp', '[]'::jsonb)) e where e->>'m' = m), '[]'::jsonb),
+        'inc', coalesce((select jsonb_agg(jsonb_build_object('m', e->'m', 'a', e->'a', 'd', e->'d', 'n', e->'n'))
+                 from jsonb_array_elements(coalesce(b->'inc', '[]'::jsonb)) e where e->>'m' = m), '[]'::jsonb));
     end if;
   end if;
 
