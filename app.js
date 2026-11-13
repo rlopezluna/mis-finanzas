@@ -114,12 +114,15 @@ function loanBody(){
  return h}
 function loansHtml(){
  const paid=S.pay.reduce((t,p)=>t+(+p.a||0),0),rest=r2(S.total-paid),nOk=S.pay.filter((p,i)=>status(i)==='Pagado').length;
+ const showLoan=+S.total>0||isRafa()||role==='guest';
+ // Cuenta sin préstamo ni deudas: solo el botón para agregar una deuda
+ if(can()&&!showLoan&&!B.debts.length)return `<div class="debts-empty"><button class="btn f" data-act="dnew">+ Agregar deuda nueva</button></div>`+(showNew?debtForm():'');
  let h=`<div class="row" style="justify-content:space-between;align-items:center"><h3 style="margin:0">Deudas</h3>${can()?'<button class="btn f" data-act="dnew">+ Agregar deuda nueva</button>':''}</div>`;
  if(can()&&showNew)h+=debtForm();
- h+=foldHtml('loan',loanTitle(),!(+S.total>0)?'Sin registrar':rest<=0.005?'Liquidado':'Te faltan '+M(rest)+'<small>'+nOk+' de '+S.pay.length+' pagos</small>',loanBody(),true);
+ if(showLoan)h+=foldHtml('loan',loanTitle(),!(+S.total>0)?'Sin registrar':rest<=0.005?'Liquidado':'Te faltan '+M(rest)+'<small>'+nOk+' de '+S.pay.length+' pagos</small>',loanBody(),true);
  if(can()){B.debts.forEach(D=>{const rs=r2(D.total-dpaid(D)),n=D.pay.filter((p,k)=>stt(p.a,ds(D,k+1),addM(D.start,k))==='Pagado').length;
   h+=foldHtml(D.id,esc(D.n),ddone(D)?'Liquidada':'Te faltan '+M(rs)+'<small>'+n+' de '+D.months+' pagos</small>',debtCard(D),false)});
-  if(!B.debts.length&&!showNew)h+='<p class="note">Aquí aparecerán tus compras a meses y otras deudas. Toca "Agregar deuda nueva" para crear una.</p>'}
+  if(!B.debts.length&&!showNew&&showLoan)h+='<p class="note">Aquí aparecerán tus compras a meses y otras deudas. Toca "Agregar deuda nueva" para crear una.</p>'}
  return h}
 
 const METH={c:'Crédito',d:'Débito',e:'Efectivo',v:'Vales'};
@@ -217,7 +220,8 @@ function ap(id,val,o){o=o||{};const st=o.st||100;
  const ch=(o.chips||[]).map(q=>`<button type="button" class="chip" data-aq="${id}" data-v="${q}">${M(q).replace(/\.00$/,'')}</button>`).join('')+(o.clr?`<button type="button" class="chip" data-clr="${o.key}">Automático</button>`:'');
  return `<div class="ap"><div class="apr"><button type="button" class="stp" data-as="${id}" data-d="-1" data-st="${st}" aria-label="Bajar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><input id="${id}" class="apn" type="number" inputmode="decimal" step="0.01" min="0" placeholder="${o.ph||'0'}" value="${esc(val==null?'':val)}"${o.key?` data-b="${o.key}"`:''}><button type="button" class="stp" data-as="${id}" data-d="1" data-st="${st}" aria-label="Subir"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button></div>${ch?`<div class="chips">${ch}</div>`:''}</div>`}
 function decorate(){const app=$('#app');
- if(app&&!app.querySelector(':scope>.cbar')){const bar=document.createElement('div');bar.className='cbar';bar.innerHTML='<button type="button" class="chip" data-act="collall">Contraer todo</button><button type="button" class="chip" data-act="expall">Expandir todo</button>';app.prepend(bar)}
+ if(app&&!app.querySelector('.card>h3,.fold'))app.querySelector(':scope>.cbar')?.remove();
+ else if(app&&!app.querySelector(':scope>.cbar')){const bar=document.createElement('div');bar.className='cbar';bar.innerHTML='<button type="button" class="chip" data-act="collall">Contraer todo</button><button type="button" class="chip" data-act="expall">Expandir todo</button>';app.prepend(bar)}
  if(app)app.querySelectorAll('.card').forEach(c=>{const hh=c.querySelector(':scope>h3');if(!hh)return;hh.dataset.ck=hh.textContent.trim();c.classList.add('cc');c.classList.toggle('collapsed',CL.has(hh.dataset.ck));hh.tabIndex=0;hh.setAttribute('role','button');hh.setAttribute('aria-expanded',String(!c.classList.contains('collapsed')))});
  if(app)app.querySelectorAll('input:not([autocomplete]):not([type=file])').forEach(i=>i.setAttribute('autocomplete','off'));
  if(app){app.querySelectorAll('.fl').forEach(f=>{const s=f.querySelector(':scope>span'),lb=s&&s.textContent.trim();if(lb)f.querySelectorAll('input,select').forEach(i=>{if(!i.hasAttribute('aria-label'))i.setAttribute('aria-label',lb)})});
