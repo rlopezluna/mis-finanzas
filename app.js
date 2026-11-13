@@ -86,7 +86,7 @@ function loanBody(){
  const paid=S.pay.reduce((t,p)=>t+(+p.a||0),0),rest=r2(S.total-paid),pct=S.total?Math.min(100,paid/S.total*100):0;
  const nOk=S.pay.filter((p,i)=>status(i)==='Pagado').length;
  let h='';
-  h+=loanHero()+`<div class="card" style="margin-top:12px"><div class="row">
+  h+=loanHero()+`<div class="card" style="margin-top:12px"><div class="row cfg">
   <label>Monto del préstamo<input type="number" step="0.01" data-s="total" value="${esc(S.total)}"></label>
   <label>Pago mensual<input type="number" step="0.01" data-s="monthly" value="${esc(S.monthly)}"></label>
   <label>Primer pago (mes)<input type="month" data-s="start" value="${esc(S.start.slice(0,7))}"></label>

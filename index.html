@@ -9,7 +9,7 @@
 <meta name="referrer" content="no-referrer">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<script src="config.js?v=40"></script>
+<script src="config.js?v=41"></script>
 <style>
 /* ===== Paleta: crema, café, verde olivo y vino ===== */
 :root{
@@ -300,6 +300,40 @@ table.ro{min-width:0}
  .hero-act{justify-content:stretch}.hero-act .btn{width:100%}
  .shlink{flex-direction:column}
 }
+input[type=month]{max-width:200px}
+/* ===== Celular: sección Préstamo más compacta ===== */
+@media (max-width:699px){
+ main{padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
+ .fold>summary{padding:14px 12px}.fold .fb{padding:0 10px 12px}
+ .fold .fb .card{padding:14px 12px 12px}
+ .fold .ft{min-width:0}
+ /* Ajustes del préstamo en 2 columnas */
+ .row.cfg{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px 10px}
+ .row.cfg>*{width:auto;min-width:0;grid-column:span 3}
+ .row.cfg>:nth-child(3){grid-column:span 4}.row.cfg>:nth-child(4){grid-column:span 2}
+ .row.cfg input{min-width:0}
+ /* Cada pago: tarjeta compacta */
+ tr.dr{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"num st" "fecha prog" "pag freal" "btn btn";gap:8px 10px;padding:14px 0 6px;align-items:end}
+ tr.dr td{min-width:0}
+ tr.dr td input{min-width:0;width:100%}
+ tr.dr td:nth-child(1){grid-area:num;grid-column:auto;align-self:center}
+ tr.dr td:nth-child(2){grid-area:fecha}tr.dr td:nth-child(3){grid-area:prog}
+ tr.dr td:nth-child(2)::before,tr.dr td:nth-child(3)::before{display:inline;margin:0 4px 0 0}
+ tr.dr td:nth-child(2)::before{content:"Vence"}tr.dr td:nth-child(3)::before{content:"Monto"}
+ tr.dr td:nth-child(2),tr.dr td:nth-child(3){font-size:14px}
+ tr.dr td:nth-child(4){grid-area:pag}tr.dr td:nth-child(5){grid-area:freal}
+ tr.dr td:nth-child(6){grid-area:st;justify-self:end;align-self:center;font-size:13px;padding:3px 10px;border-radius:99px;background:var(--sunk)}
+ tr.dr td:nth-child(6)::before{display:none}
+ tr.dr td:nth-child(6).Pagado{background:var(--acc-soft)}tr.dr td:nth-child(6).Atrasado{background:var(--wine-soft)}
+ tr.dr td:nth-child(7){grid-area:btn;grid-column:auto}
+ tr.nr{padding-bottom:10px}
+ .row.cfg{align-items:end}
+}
+@media (max-width:380px){
+ .row.cfg>:nth-child(3){grid-column:span 6}.row.cfg>:nth-child(4){grid-column:span 3}
+ tr.dr{grid-template-areas:"num st" "fecha prog" "pag pag" "freal freal" "btn btn"}
+ tr.dr td:nth-child(2),tr.dr td:nth-child(3){font-size:13px}
+}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (pointer:coarse){.btn,.stp{min-height:44px}}
 
@@ -351,4 +385,4 @@ table.ro{min-width:0}
 <div id="app" tabindex="-1"></div>
 <p class="note" id="sync"></p>
 </main>
-<script src="app.js?v=40"></script></body></html>
+<script src="app.js?v=41"></script></body></html>
