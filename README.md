@@ -125,6 +125,19 @@ Cuando tu familia ya tenga sus cuentas, evita que extraños se registren: en Sup
 
 ---
 
+## Coach financiero
+
+La pestaña **Coach** revisa tus datos y te dice qué atender, sin inteligencia artificial y sin enviar tus datos a ningún lado:
+
+- **Salud financiera (0 a 100):** combina pagos al día, gasto de la quincena, peso de tus deudas frente a tu ingreso y ahorro.
+- **Alertas:** pagos atrasados del préstamo o de compras a meses, estados de cuenta por vencer o vencidos, saldos en negativo, plan del mes que no cuadra.
+- **Avisos:** si a tu ritmo actual te vas a pasar de la quincena (y cuánto puedes gastar al día), si una categoría subió frente al mes pasado, si tu ahorro del mes va atrasado.
+- **Ideas:** cuánto te falta para tu meta de ahorro y en cuántos meses llegas, tu colchón para emergencias (meta: 3 meses de gastos).
+
+## Apariencia
+
+En **Cuenta → Apariencia** puedes elegir modo **automático, claro u oscuro**, una de 6 paletas (Café y olivo, Vino tinto, Bosque, Mar de Cortés, Lavanda, Grafito) o tus **propios colores**. Se guarda en tu cuenta y se aplica en todos tus dispositivos.
+
 ## Compartir en vivo
 
 Puedes mandar a otra persona un enlace para que vea, desde su celular y **sin crear cuenta**, el estado de:
@@ -188,7 +201,13 @@ Abre http://localhost:8000. Usa la misma base de datos de Supabase que la versi�
 
 ---
 
-## Novedades (versión 39)
+## Novedades (versión 43)
+
+- **Coach financiero** con puntaje de salud y consejos con tus datos.
+- **Apariencia:** modo claro/oscuro, 6 paletas y colores propios.
+- Préstamo mejor adaptado a celular (incluye arreglo para iPhone).
+
+## Versión 39
 
 - **Compartir en vivo:** enlaces de solo lectura para el préstamo, las deudas y las cuentas, con actualización en tiempo real.
 

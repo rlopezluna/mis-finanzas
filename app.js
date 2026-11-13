@@ -31,6 +31,7 @@ const normB=o=>{o=o&&typeof o==='object'?o:{};const b=Object.assign(cl(BDEF),{t:
  b.inc=arr(o.inc).map(x=>({m:/^[de]$/.test(x.m)?x.m:'e',a:num(x.a,0),d:sdt(x.d),n:str(x.n)}));
  b.sav=arr(o.sav).map(x=>({n:str(x.n),a:num(x.a,0),d:sdt(x.d)}));
  b.debts=arr(o.debts).map(D=>{const months=int(D.months,1,120,1);return{id:sid(D.id),n:str(D.n,80)||'Compra',price:num(D.price,0),total:num(D.total,0),months,mo:num(D.mo,0),start:sdt(D.start,today()),pay:arr(D.pay).slice(0,months).map(cpay).concat(Array.from({length:Math.max(0,months-arr(D.pay).length)},()=>({a:0,d:'',n:''})))}});
+ b.ui=o.ui&&typeof o.ui==='object'?{mode:str(o.ui.mode,5),pal:str(o.ui.pal,12),acc:str(o.ui.acc,7)||null,acc2:str(o.ui.acc2,7)||null}:null;
  b.stm=arr(o.stm).map(x=>({id:sid(x.id),c:str(x.c,40),m:/^\d{4}-\d{2}$/.test(String(x.m||''))?x.m:'',sal:num(x.sal,0),min:num(x.min,0),l:sdt(x.l),n:str(x.n),pd:sdt(x.pd)}));
  return b};
 const mkD=(y,m0,d)=>{const x=new Date(y,m0,1),dm=new Date(x.getFullYear(),x.getMonth()+1,0).getDate();return x.getFullYear()+'-'+pad(x.getMonth()+1)+'-'+pad(Math.min(d,dm))};
@@ -259,7 +260,7 @@ async function sbPull(){if(!API||!ses||!role||pulling)return;pulling=true;try{
  const rows=await api('/rest/v1/app_state?select=key,value&user_id=eq.'+encodeURIComponent(tgt()))||[];let ch=false,hasL=false,hasB=false;
  for(const rw of rows){const v=rw.value||{};
   if(rw.key==='loan'){hasL=true;if(!(S.t>0)||(v.t||0)>S.t){normS(v);persist('fin',v);ch=true}else if(S.t>(v.t||0))apiPut('loan',loanObj())}
-  else if(rw.key==='budget'&&can()){hasB=true;if(!(B.t>0)||(v.t||0)>B.t){B=normB(v);persist('finb',B);ch=true}else if(B.t>(v.t||0))apiPut('budget',B)}}
+  else if(rw.key==='budget'&&can()){hasB=true;if(!(B.t>0)||(v.t||0)>B.t){B=normB(v);persist('finb',B);ch=true;if(B.ui){UI=normUI(B.ui);applyUI();try{localStorage.setItem('ui',JSON.stringify(UI))}catch(e){}}}else if(B.t>(v.t||0))apiPut('budget',B)}}
  if(!hasL&&role!=='guest'){S.t=S.t||Date.now();apiPut('loan',loanObj())}
  if(can()&&!hasB){B.t=B.t||Date.now();apiPut('budget',B)}
  sbOk=true;lastSync=Date.now();if(err&&err.indexOf('nube')>=0)err='';
@@ -357,7 +358,7 @@ function render(){
  let h='';
  if(tab==='loan'){
 h+=loansHtml();
- }else if(tab==='stats'){h+=statsHtml()}else if(tab==='acct'){h+=accountHtml();if(!me)loadMe()}else{
+ }else if(tab==='stats'){h+=statsHtml()}else if(tab==='coach'){h+=coachHtml()}else if(tab==='acct'){const a=accountHtml(),i=a.indexOf('</div>')+6;h+=a.slice(0,i)+appearanceHtml()+a.slice(i);if(!me)loadMe()}else{
   const t=today(),ym=t.slice(0,7),ld=loanDone(),dsum=r2(B.debts.filter(D=>!ddone(D)).reduce((s,D)=>s+mens(D),0)),lp=r2((ld?0:S.monthly)+dsum),dl=ld?'compras a meses':dsum>0?'el préstamo y compras a meses':'el préstamo';
   const P=curPeriod(),bB=r2(B.amtB-lp),bA=r2(B.amtA-B.sm),bud=k=>k==='A'?(B.lq2!=null?+B.lq2:bA):(B.lq1!=null?+B.lq1:bB),gastosM=r2(bud('A')+bud('B')),pre=t<B.gs,budC=pre?0:bud(P.cur.k),budN=pre?bud(curPeriod(B.gs).cur.k):bud(P.next.k);
   const inP=e=>{const d=e.d||t;return d>=P.cur.s&&d<P.next.s};
@@ -412,6 +413,9 @@ document.addEventListener('click',e=>{
  if(a==='dcancel'){showNew=false;render();return}
  if(a==='eye'){const q=$('#lp');q.type=q.type==='password'?'text':'password';t.textContent=q.type==='password'?'Ver':'Ocultar';return}
  if(a==='logout'){logout();return}
+ if(a==='uimode'){setUI({mode:t.dataset.v},true);return}
+ if(a==='uipal'){setUI({pal:t.dataset.v,acc:null,acc2:null},true);return}
+ if(a==='uireset'){setUI({acc:null,acc2:null},true);return}
  if(a==='share'){openShare(t.dataset.item,t.dataset.label);return}
  if(a==='shcreate'){createShare();return}
  if(a==='shstop'){if(shCur&&confirm('¿Dejar de compartir? El enlace dejará de funcionar.'))stopShare(shCur.item);return}
@@ -448,6 +452,7 @@ document.addEventListener('click',e=>{
  else if(a==='ddeln'){cfm='';render()}
  else if(a==='sadd'){const n=$('#sn').value.trim(),m=parseFloat($('#sa').value);if(m>0){B.sav.push({n,a:m,d:today()});saveB()}}
 });
+document.addEventListener('input',e=>{const t=e.target;if(t.id==='uiacc'||t.id==='uiacc2'){UI=normUI(Object.assign({},UI,{[t.id==='uiacc'?'acc':'acc2']:t.value}));applyUI()}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.target.id==='lp'||e.target.id==='lp2')){regMode?doRegister():doLogin()}
  else if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.cc>h3')){e.preventDefault();e.target.click()}});
 document.addEventListener('click',e=>{
@@ -461,6 +466,7 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('change',e=>{
  const t=e.target,v=t.type==='number'?(parseFloat(t.value)||0):t.value;
+ if(t.id==='uiacc'||t.id==='uiacc2'){setUI({[t.id==='uiacc'?'acc':'acc2']:t.value},true);return}
  if(t.id==='impf'){if(t.files&&t.files[0])importData(t.files[0]);t.value='';return}
  if(t.dataset.s){let w=v;if(t.dataset.s==='start'&&String(w).length===7)w+='-01';if(t.dataset.s==='day')w=Math.max(1,Math.min(31,Math.round(v)||30));S[t.dataset.s]=w;saveL()}
  else if(t.dataset.b){B[t.dataset.b]=(/^lq/.test(t.dataset.b)&&t.value==='')?null:v;saveB()}
@@ -468,6 +474,133 @@ document.addEventListener('change',e=>{
  else if(t.dataset.df){const D=B.debts.find(x=>x.id===t.dataset.d),p=D&&D.pay[+t.dataset.i];if(p){p[t.dataset.df]=t.dataset.df==='a'?(parseFloat(t.value)||0):t.value;saveB()}}
  else if(t.dataset.f){const p=S.pay[+t.dataset.i];p[t.dataset.f]=t.dataset.f==='a'?(parseFloat(t.value)||0):t.value;saveL()}
 });
+
+
+// ===================== Apariencia: modo y colores =====================
+const PALS={
+ cafe:{n:'Café y olivo',l:['#5e6b35','#7c2e3b'],d:['#a9b56e','#d98f99']},
+ vino:{n:'Vino tinto',l:['#7c2e3b','#8a5a16'],d:['#d98f99','#dcae67']},
+ bosque:{n:'Bosque',l:['#2f5d50','#8a4b2a'],d:['#7fb8a6','#d9a07a']},
+ mar:{n:'Mar de Cortés',l:['#1f5f7a','#9c4a2f'],d:['#7fb6cf','#e39a7f']},
+ lavanda:{n:'Lavanda',l:['#5d4a7a','#8a3b5c'],d:['#b7a6d6','#e08fb0']},
+ grafito:{n:'Grafito',l:['#3d4a52','#9b2f3f'],d:['#a9b7bf','#e2919b']}};
+const UIDEF={mode:'auto',pal:'cafe',acc:null,acc2:null};
+const HEX=/^#[0-9a-f]{6}$/i;
+const normUI=o=>{o=o&&typeof o==='object'?o:{};return{mode:['auto','light','dark'].includes(o.mode)?o.mode:'auto',pal:PALS[o.pal]?o.pal:'cafe',acc:HEX.test(o.acc||'')?o.acc.toLowerCase():null,acc2:HEX.test(o.acc2||'')?o.acc2.toLowerCase():null}};
+let UI=UIDEF;try{UI=normUI(JSON.parse(localStorage.getItem('ui')||'null'))}catch(e){}
+const DARKQ=matchMedia('(prefers-color-scheme: dark)');
+const isDark=()=>UI.mode==='dark'||(UI.mode==='auto'&&DARKQ.matches);
+const lum=h=>{const c=[1,3,5].map(i=>parseInt(h.substr(i,2),16)/255).map(x=>x<=.03928?x/12.92:Math.pow((x+.055)/1.055,2.4));return .2126*c[0]+.7152*c[1]+.0722*c[2]};
+const mixHex=(a,b,w)=>'#'+[1,3,5].map(i=>Math.round(parseInt(a.substr(i,2),16)*w+parseInt(b.substr(i,2),16)*(1-w)).toString(16).padStart(2,'0')).join('');
+const contrast=(a,b)=>{const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+function themeColors(){const dk=isDark(),p=PALS[UI.pal][dk?'d':'l'];
+ const lift=c=>dk&&lum(c)<.25?mixHex(c,'#ffffff',.62):c;
+ return{acc:UI.acc?lift(UI.acc):p[0],wine:UI.acc2?lift(UI.acc2):p[1],raw:UI.acc||p[0],dk}}
+const accEff=()=>themeColors().acc;
+function applyUI(){const r=document.documentElement,s=r.style;
+ if(UI.mode==='auto')r.removeAttribute('data-theme');else r.setAttribute('data-theme',UI.mode);
+ const c=themeColors();
+ s.setProperty('--acc',c.acc);s.setProperty('--wine',c.wine);
+ s.setProperty('--acc-ink',c.dk?'#1e1813':(lum(c.raw)>.4?'#1e1813':'#fbf6ec'));
+ s.setProperty('--acc-soft',`color-mix(in srgb, ${c.acc} ${c.dk?22:16}%, var(--card))`);
+ s.setProperty('--wine-soft',`color-mix(in srgb, ${c.wine} ${c.dk?22:14}%, var(--card))`);
+ const bg=c.dk?'#1e1813':'#f3ebdd';document.querySelectorAll('meta[name=theme-color]').forEach(m=>{m.setAttribute('content',bg);m.removeAttribute('media')})}
+function saveUI(sync){try{localStorage.setItem('ui',JSON.stringify(UI))}catch(e){}if(sync&&can()){B.ui=UI;saveB()}else render()}
+function setUI(p,sync){UI=normUI(Object.assign({},UI,p));applyUI();saveUI(sync)}
+DARKQ.addEventListener&&DARKQ.addEventListener('change',()=>{if(UI.mode==='auto')applyUI()});
+applyUI();
+function appearanceHtml(){const dk=isDark(),c=themeColors(),card=dk?'#2a211a':'#fffaf2';
+ const low=UI.acc&&contrast(accEff(),card)<3;
+ const modes=[['auto','Automático'],['light','Claro'],['dark','Oscuro']].map(([k,l])=>`<button type="button" class="${UI.mode===k?'on':''}" aria-pressed="${UI.mode===k}" data-act="uimode" data-v="${k}">${l}</button>`).join('');
+ const pals=Object.entries(PALS).map(([k,p])=>{const on=UI.pal===k&&!UI.acc&&!UI.acc2,cs=p[dk?'d':'l'];return `<button type="button" class="pal${on?' on':''}" aria-pressed="${on}" data-act="uipal" data-v="${k}"><span class="pdots"><i style="background:${cs[0]}"></i><i style="background:${cs[1]}"></i></span>${p.n}</button>`}).join('');
+ return `<div class="card"><h3>Apariencia</h3>
+  <p class="note">Elige cómo se ve la app. Se guarda en tu cuenta y se aplica en todos tus dispositivos.</p>
+  <div class="fl" style="margin-top:12px"><span>Modo</span><div class="seg" role="group" aria-label="Modo de color">${modes}</div></div>
+  <div class="fl" style="margin-top:14px"><span>Paleta</span><div class="pals">${pals}</div></div>
+  <div class="fl" style="margin-top:14px"><span>Colores propios</span>
+   <div class="cpick"><label><input type="color" id="uiacc" value="${UI.acc||PALS[UI.pal].l[0]}"> Principal <small>botones, avance, pagos hechos</small></label>
+   <label><input type="color" id="uiacc2" value="${UI.acc2||PALS[UI.pal].l[1]}"> Acento <small>pestaña activa, próximo pago, enlaces</small></label></div>
+   ${low?`<p class="note badm">Ese color principal se lee poco sobre el fondo. Prueba uno más ${dk?'claro':'oscuro'}.</p>`:''}
+   ${UI.acc||UI.acc2?'<button type="button" class="btn" data-act="uireset" style="margin-top:8px">Volver a la paleta</button>':''}</div>
+  <div class="uiprev" aria-hidden="true"><span class="btn f">Botón</span><span class="tg v">Pagado</span><span style="color:var(--wine);font-weight:600">Próximo pago</span><span class="bar" style="flex:1;margin:0"><i style="width:62%"></i></span></div></div>`}
+
+// ===================== Coach financiero (sin IA: reglas sobre tus datos) =====================
+const dDiff=(a,b)=>Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5);
+const pctTxt=x=>Math.round(x*100)+'%';
+function coachData(){const t=today(),ym=t.slice(0,7),[yy,mm]=ym.split('-').map(Number),pm=mkD(yy,mm-2,1).slice(0,7);
+ const ld=loanDone(),openD=B.debts.filter(D=>!ddone(D)),dsum=r2(openD.reduce((s,D)=>s+mens(D),0)),lp=r2((ld?0:+S.monthly||0)+dsum);
+ const P=curPeriod(),bB=r2(B.amtB-lp),bA=r2(B.amtA-B.sm),bud=k=>k==='A'?(B.lq2!=null?+B.lq2:bA):(B.lq1!=null?+B.lq1:bB),pre=t<B.gs,budC=pre?0:bud(P.cur.k);
+ const inP=e=>{const d=e.d||t;return d>=P.cur.s&&d<P.next.s};
+ const ex=r2(B.exp.filter(e=>inP(e)&&(!e.m||e.m==='c')).reduce((s,e)=>s+(+e.a||0),0));
+ const perLen=Math.max(1,dDiff(P.cur.s,P.next.s)),elapsed=Math.min(perLen,Math.max(1,dDiff(P.cur.s,t)+1)),proj=r2(ex/elapsed*perLen);
+ const mes=B.exp.filter(e=>(e.d||t).slice(0,7)===ym),prev=B.exp.filter(e=>(e.d||'').slice(0,7)===pm);
+ const byCat=a=>a.reduce((o,e)=>{const c=e.c||'Otro';o[c]=r2((o[c]||0)+(+e.a||0));return o},{});
+ const sv=r2(B.sav.reduce((s,e)=>s+(+e.a||0),0)),svM=r2(B.sav.filter(e=>(e.d||'').slice(0,7)===ym).reduce((s,e)=>s+(+e.a||0),0));
+ const income=r2(+B.amtA+ +B.amtB),gastosM=r2(bud('A')+bud('B'));
+ return{t,ym,ld,openD,dsum,lp,P,pre,budC,ex,perLen,elapsed,proj,mes,prev,cat:byCat(mes),catPrev:byCat(prev),sv,svM,income,gastosM,neg:bA<0||bB<0}}
+function coachTips(c){const T=[],add=(lvl,title,text,act)=>T.push({lvl,title,text,act});
+ const loanIt=planItemsLoan(),late=loanIt.filter(x=>x.st==='Atrasado'),nx=loanIt.findIndex(x=>x.st!=='Pagado');
+ // Préstamo
+ if(late.length)add('alerta',`${late.length===1?'Tienes un pago atrasado':`Tienes ${late.length} pagos atrasados`} del préstamo`,`Suman ${M(late.reduce((s,x)=>s+Math.max(0,x.amt-x.a),0))}. Ponte al corriente antes del siguiente vencimiento para no acumular.`,'loan');
+ else if(nx>=0){const x=loanIt[nx],dd=dDiff(c.t,x.due),falta=Math.max(0,r2(x.amt-x.a));
+  if(dd>=0&&dd<=7)add('aviso',`Tu próximo pago vence ${dd===0?'hoy':dd===1?'mañana':`en ${dd} días`}`,`Pago ${nx+1} de ${M(falta)} el ${fmtD(x.due)}. Si ya lo hiciste, márcalo como pagado.`,'loan')}
+ if(!c.ld&&nx>=0){const left=loanIt.length-loanIt.filter(x=>x.st==='Pagado').length,last=loanIt[loanIt.length-1].due;
+  add('bien','Así va tu préstamo',`Llevas ${loanIt.filter(x=>x.st==='Pagado').length} de ${loanIt.length} pagos. Si sigues al día, terminas el ${fmtD(last)}: te faltan ${left} ${left===1?'pago':'pagos'}.`,'loan')}
+ else if(c.ld)add('bien','Préstamo liquidado','Ya no debes nada del préstamo familiar. Ese dinero ahora puede ir directo a tu ahorro.','bud');
+ // Deudas a meses
+ c.openD.forEach(D=>{const it=planItemsDebt(D),l=it.filter(x=>x.st==='Atrasado');if(l.length)add('alerta',`${esc(D.n)}: ${l.length===1?'un pago atrasado':`${l.length} pagos atrasados`}`,`Revisa esa compra a meses; los atrasos en tarjetas suelen generar intereses y comisiones.`,'loan')});
+ // Carga de deudas vs ingreso
+ if(c.income>0&&c.lp>0){const r=c.lp/c.income;
+  if(r>.4)add('alerta','Tus deudas se llevan mucho de tu ingreso',`Pagas ${M(c.lp)} al mes en deudas, el ${pctTxt(r)} de lo que recibes. Lo sano es menos del 30%. Evita nuevas compras a meses hasta liquidar alguna.`,'loan');
+  else if(r>.3)add('aviso','Cuidado con nuevas deudas',`Tus pagos de deudas son el ${pctTxt(r)} de tu ingreso (${M(c.lp)} de ${M(c.income)}). Antes de otra compra a meses, termina una.`,'loan');
+  else add('bien','Tus deudas están bajo control',`Pagas el ${pctTxt(r)} de tu ingreso en deudas, por debajo del 30% recomendado.`,null)}
+ if(c.neg)add('alerta','Tu plan del mes no cuadra','Uno de tus depósitos no alcanza para lo que le asignaste (préstamo, compras o ahorro). Ajusta montos en Presupuesto.','bud');
+ // Quincena
+ if(!c.pre&&c.budC>0){const left=r2(c.budC-c.ex);
+  if(left<0)add('alerta','Ya te pasaste del límite de la quincena',`Llevas ${M(c.ex)} de ${M(c.budC)}: ${M(-left)} de más. Lo que queda de la quincena, intenta solo gastos indispensables.`,'bud');
+  else if(c.elapsed>=3&&c.proj>c.budC*1.05)add('aviso','A este ritmo te vas a pasar',`Llevas ${M(c.ex)} en ${c.elapsed} días. Si sigues igual, gastarás unos ${M(c.proj)} y tu límite es ${M(c.budC)}. Te quedan ${M(left)} para ${c.perLen-c.elapsed+1} días: unos ${M(left/Math.max(1,c.perLen-c.elapsed+1))} diarios.`,'bud');
+  else if(c.elapsed>=3)add('bien','Vas bien con la quincena',`Te quedan ${M(left)} de ${M(c.budC)}. Puedes gastar unos ${M(left/Math.max(1,c.perLen-c.elapsed+1))} al día sin pasarte.`,'bud')}
+ // Categorías
+ const top=Object.entries(c.cat).sort((a,b)=>b[1]-a[1])[0];
+ if(top&&c.mes.length>=3){const prev=c.catPrev[top[0]]||0,tot=Object.values(c.cat).reduce((s,x)=>s+x,0);
+  if(prev>0&&top[1]>prev*1.25)add('aviso',`${esc(top[0])} subió este mes`,`Llevas ${M(top[1])} en ${esc(top[0]).toLowerCase()}, ${pctTxt(top[1]/prev-1)} más que el mes pasado (${M(prev)}).`,'stats');
+  else add('idea',`Tu gasto más grande es ${esc(top[0]).toLowerCase()}`,`Es el ${pctTxt(top[1]/tot)} de lo que llevas gastado este mes (${M(top[1])}). Si buscas dónde recortar, empieza ahí.`,'stats')}
+ // Ahorro
+ if(B.sm>0){const day=+c.t.slice(8,10),r=c.svM/B.sm;
+  if(r>=1)add('bien','Cumpliste tu ahorro del mes',`Ahorraste ${M(c.svM)} de ${M(B.sm)}. Lo que ahorres de más acelera tu meta.`,'bud');
+  else if(day>=16&&r<.5)add('aviso','Tu ahorro del mes va atrasado',`Llevas ${M(c.svM)} de ${M(B.sm)}. Apártalo en cuanto llegue tu depósito del día ${B.dayA}, antes de gastar.`,'bud')}
+ else add('idea','Ponte una meta de ahorro mensual','Aunque sea poco: apartarlo en cuanto te pagan funciona mejor que ahorrar lo que sobre. Puedes definirla en Presupuesto, Plan del mes.','bud');
+ if(B.goal>0&&c.sv<B.goal){const avg=Math.max(B.sm,c.svM);if(avg>0){const m=Math.ceil((B.goal-c.sv)/avg);add('idea','Tu meta de ahorro',`Te faltan ${M(B.goal-c.sv)} para tu meta de ${M(B.goal)}. Ahorrando ${M(avg)} al mes, la alcanzas en unos ${m} ${m===1?'mes':'meses'}.`,'bud')}}
+ // Fondo de emergencia
+ if(c.gastosM>0){const mo=c.sv/c.gastosM;
+  if(mo<1)add('idea','Arma tu colchón para emergencias',`Tus ahorros (${M(c.sv)}) cubren ${mo<.1?'menos de una semana':`unos ${Math.max(1,Math.round(mo*30))} días`} de gastos. La meta recomendada es 3 meses: ${M(c.gastosM*3)}.`,'bud');
+  else if(mo<3)add('idea','Tu colchón va creciendo',`Tus ahorros cubren ${mo.toFixed(1)} meses de gastos. La meta es 3 meses (${M(c.gastosM*3)}).`,'bud')}
+ // Cuentas con saldo
+ ['v','e','d'].forEach(k=>{const n={v:'vales',e:'efectivo',d:'débito'}[k],ini=+B[{v:'vIni',e:'cIni',d:'dIni'}[k]]||0;if(!ini&&!B.exp.some(e=>e.m===k))return;const i=accInfo(k);
+  if(i.bal<0)add('alerta',`Tu saldo de ${n} está en negativo`,`Registraste ${M(-i.bal)} más de lo que tenías. Revisa si falta un depósito o si algún gasto quedó duplicado.`,'bud')});
+ // Estados de cuenta
+ B.stm.filter(x=>!x.pd&&x.l).forEach(x=>{const dd=dDiff(c.t,x.l);
+  if(dd<0)add('alerta',`${esc(x.c)}: estado de cuenta vencido`,`Venció el ${fmtD(x.l)} con saldo de ${M(x.sal)}. Pagar tarde genera intereses y afecta tu historial.`,'bud');
+  else if(dd<=5)add('aviso',`${esc(x.c)} vence ${dd===0?'hoy':dd===1?'mañana':`en ${dd} días`}`,`Paga el total (${M(x.sal)}) y no solo el mínimo (${M(x.min)}): pagar el mínimo hace que la deuda crezca con intereses.`,'bud')});
+ if(!B.exp.length)add('idea','Registra tus gastos unos días','Con una o dos semanas de gastos registrados podré decirte en qué se va tu dinero y si vas a llegar a la quincena.','bud');
+ const ord={alerta:0,aviso:1,idea:2,bien:3};return T.sort((a,b)=>ord[a.lvl]-ord[b.lvl])}
+function coachScore(c,T){const P=[];
+ const late=planItemsLoan().filter(x=>x.st==='Atrasado').length+c.openD.reduce((s,D)=>s+planItemsDebt(D).filter(x=>x.st==='Atrasado').length,0)+B.stm.filter(x=>!x.pd&&x.l&&x.l<c.t).length;
+ P.push({n:'Pagos al día',v:Math.max(0,100-late*30)});
+ if(!c.pre&&c.budC>0){const r=c.ex>c.budC?2:c.proj/c.budC;P.push({n:'Gasto de la quincena',v:r<=1?100:r>=1.6?15:Math.round(100-(r-1)/.6*85)})}
+ if(c.income>0){const r=c.lp/c.income;P.push({n:'Peso de las deudas',v:r<=.3?100:r>=.6?20:Math.round(100-(r-.3)/.3*80)})}
+ P.push({n:'Ahorro',v:B.sm>0?Math.min(100,Math.round(30+c.svM/B.sm*70)):35});
+ const v=Math.round(P.reduce((s,x)=>s+x.v,0)/P.length);
+ return{v,P,label:v>=80?'Vas muy bien':v>=60?'Vas bien, con detalles':v>=40?'Hay que ajustar':'Necesita atención'}}
+function coachHtml(){const c=coachData(),T=coachTips(c),sc=coachScore(c,T);
+ const ico={alerta:'!',aviso:'◷',idea:'✦',bien:'✓'},lbl={alerta:'Atiende esto',aviso:'Ojo',idea:'Idea',bien:'Bien'},go={loan:'Ver préstamo',bud:'Ir a presupuesto',stats:'Ver estadísticas'};
+ const col=sc.v>=80?'var(--ok)':sc.v>=60?'var(--acc)':sc.v>=40?'var(--warn)':'var(--bad)';
+ return `<div class="card coach-score"><div class="cs-top"><div class="cs-ring" style="--p:${sc.v};--c:${col}" role="img" aria-label="Salud financiera ${sc.v} de 100"><b class="big">${sc.v}</b><small>de 100</small></div>
+  <div><p class="hk">Tu salud financiera</p><p class="cs-label" style="color:${col}">${sc.label}</p><p class="note">Calculado con tus pagos, tu gasto de la quincena, tus deudas y tu ahorro. Se actualiza solo.</p></div></div>
+  <ul class="cs-p">${sc.P.map(p=>`<li><span>${p.n}</span><span class="bar"><i style="width:${p.v}%;background:${p.v>=80?'var(--ok)':p.v>=50?'var(--warn)':'var(--bad)'}"></i></span><b>${p.v}</b></li>`).join('')}</ul></div>
+  <h3 class="coach-h">Lo que te recomiendo</h3>
+  ${T.map(x=>`<div class="tip t-${x.lvl}"><span class="tip-i" aria-hidden="true">${ico[x.lvl]}</span><div class="tip-b"><p class="tip-k">${lbl[x.lvl]}</p><p class="tip-t">${x.title}</p><p class="tip-x">${x.text}</p>${x.act?`<button type="button" class="linkb" data-tab="${x.act}">${go[x.act]}</button>`:''}</div></div>`).join('')}
+  <p class="note" style="text-align:center;margin-top:16px">El coach revisa tus datos en este dispositivo; no se envían a ningún servicio externo.</p>`}
 
 // ===================== Compartir en vivo =====================
 // Dueño: crea un enlace de solo lectura por cosa compartida (préstamo, deuda o cuenta).
