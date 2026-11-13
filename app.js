@@ -1,6 +1,11 @@
 // Mis finanzas — lógica de la app
-const DEF={total:50000,monthly:5000,day:30,start:'2026-11-30',pay:Array.from({length:10},()=>({a:0,d:'',n:''}))};
-const BDEF={cIni:0,cDate:'2026-11-02',dIni:0,dDate:'2026-11-02',vIni:0,vDate:'2026-11-02',vAmt:1000,gs:'2026-10-30',dayA:15,amtA:5700,dayB:30,amtB:8700,sm:2200,exp:[],sav:[],goal:0,debts:[],stm:[]};
+// Valores iniciales: vacíos para cuentas nuevas; la cuenta de rafa arranca con los suyos
+const DEF={total:0,monthly:0,day:30,start:'2026-11-30',pay:[]};
+const RDEF={total:50000,monthly:5000,day:30,start:'2026-11-30',pay:Array.from({length:10},()=>({a:0,d:'',n:''}))};
+const BDEF={cIni:0,cDate:'2026-11-02',dIni:0,dDate:'2026-11-02',vIni:0,vDate:'2026-11-02',vAmt:0,gs:'2026-10-30',dayA:15,amtA:0,dayB:30,amtB:0,sm:0,exp:[],sav:[],goal:0,debts:[],stm:[]};
+const RBDEF=Object.assign({},BDEF,{vAmt:1000,amtA:5700,amtB:8700,sm:2200});
+const isRafa=()=>!!ses&&ses.user==='rafa';
+const loanTitle=()=>isRafa()?'Préstamo familiar':'Préstamo';
 const cl=o=>JSON.parse(JSON.stringify(o));
 let S=cl(DEF),B=cl(BDEF),tab='loan',err='',cfm='';
 const $=s=>document.querySelector(s);
@@ -9,7 +14,7 @@ const M=n=>(+n||0).toLocaleString('es-MX',{style:'currency',currency:'MXN'});
 const r2=n=>Math.round(n*100)/100;
 const pad=n=>String(n).padStart(2,'0');
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
-const nPay=()=>{const t=+S.total||0,m=+S.monthly||0;return m>0&&t>0?Math.max(1,Math.min(120,Math.ceil(t/m-1e-9))):1};
+const nPay=()=>{const t=+S.total||0,m=+S.monthly||0;return m>0&&t>0?Math.max(1,Math.min(120,Math.ceil(t/m-1e-9))):0};
 const sched=n=>{const N=nPay();return n<N?+S.monthly:n===N?Math.max(0,r2(S.total-(N-1)*S.monthly)):0};
 function fixPay(){const N=nPay();if(!Array.isArray(S.pay))S.pay=[];const lp=S.pay.reduce((r,x,k)=>((+x.a>0||x.n)?k+1:r),0),len=Math.max(N,lp);S.pay=S.pay.slice(0,len);while(S.pay.length<len)S.pay.push({a:0,d:'',n:''});return S}
 // Limpieza de datos: todo lo que viene de la nube o de un archivo de respaldo se normaliza antes de usarse
@@ -84,7 +89,8 @@ const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','di
 const shortD=s=>{const p=String(s).split('-');return p.length===3?(+p[2])+' '+MES[(+p[1]-1)%12]:''};
 const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg>';
 let justPaid=-1;
-function loanHero(){const it=planItemsLoan(),j=new Set(justPaid>=0?[justPaid]:[]);justPaid=-1;return planHero(it,+S.total||0,j,'Préstamo familiar',true,shareBtn('loan','Préstamo familiar'))}
+function loanHero(){if(!(+S.total>0))return `<div class="hero"><p class="hk">${loanTitle()}</p><p class="done-msg" style="color:var(--ink)">Aún no registras un préstamo.</p><p class="note">Escribe abajo cuánto debes y cuánto pagas al mes; aquí aparecerá tu tarjeta de pagos.</p></div>`;
+ const it=planItemsLoan(),j=new Set(justPaid>=0?[justPaid]:[]);justPaid=-1;return planHero(it,+S.total||0,j,loanTitle(),true,shareBtn('loan',loanTitle()))}
 function loanBody(){
  const paid=S.pay.reduce((t,p)=>t+(+p.a||0),0),rest=r2(S.total-paid),pct=S.total?Math.min(100,paid/S.total*100):0;
  const nOk=S.pay.filter((p,i)=>status(i)==='Pagado').length;
@@ -110,7 +116,7 @@ function loansHtml(){
  const paid=S.pay.reduce((t,p)=>t+(+p.a||0),0),rest=r2(S.total-paid),nOk=S.pay.filter((p,i)=>status(i)==='Pagado').length;
  let h=`<div class="row" style="justify-content:space-between;align-items:center"><h3 style="margin:0">Deudas</h3>${can()?'<button class="btn f" data-act="dnew">+ Agregar deuda nueva</button>':''}</div>`;
  if(can()&&showNew)h+=debtForm();
- h+=foldHtml('loan','Préstamo familiar',rest<=0.005?'Liquidado':'Te faltan '+M(rest)+'<small>'+nOk+' de '+S.pay.length+' pagos</small>',loanBody(),true);
+ h+=foldHtml('loan',loanTitle(),!(+S.total>0)?'Sin registrar':rest<=0.005?'Liquidado':'Te faltan '+M(rest)+'<small>'+nOk+' de '+S.pay.length+' pagos</small>',loanBody(),true);
  if(can()){B.debts.forEach(D=>{const rs=r2(D.total-dpaid(D)),n=D.pay.filter((p,k)=>stt(p.a,ds(D,k+1),addM(D.start,k))==='Pagado').length;
   h+=foldHtml(D.id,esc(D.n),ddone(D)?'Liquidada':'Te faltan '+M(rs)+'<small>'+n+' de '+D.months+' pagos</small>',debtCard(D),false)});
   if(!B.debts.length&&!showNew)h+='<p class="note">Aquí aparecerán tus compras a meses y otras deudas. Toca "Agregar deuda nueva" para crear una.</p>'}
@@ -121,7 +127,7 @@ const CATS=['Comida','Transporte','Casa','Salud','Ropa','Entretenimiento','Otro'
 function valesInfo(){const t=today(),vd=B.vDate||t,[y0,m0]=vd.split('-').map(Number);let cnt=0,next='';
  for(let k=0;k<240;k++){const d=mkD(y0,m0-1+k,30);if(d>t){next=d;break}if(d>vd)cnt++}
  const spent=B.exp.filter(e=>e.m==='v'&&(e.d||t)>=vd).reduce((s,e)=>s+(+e.a||0),0);
- return{bal:r2((+B.vIni||0)+cnt*(+B.vAmt||1000)-spent),next,cnt}}
+ return{bal:r2((+B.vIni||0)+cnt*(+B.vAmt||0)-spent),next,cnt}}
 function accInfo(k){if(k==='v')return valesInfo();const t=today(),dt=B[k==='e'?'cDate':'dDate']||t,ini=+B[k==='e'?'cIni':'dIni']||0;
  const spent=B.exp.filter(e=>e.m===k&&(e.d||t)>=dt).reduce((s,e)=>s+(+e.a||0),0);
  const inc=(B.inc||[]).filter(x=>x.m===k&&(x.d||t)>=dt).reduce((s,x)=>s+(+x.a||0),0);
@@ -147,7 +153,7 @@ function incBlock(k){const t=today(),list=(B.inc||[]).map((x,i)=>({x,i})).filter
   <div style="margin-top:10px">${list.length?list.map(o=>`<div class="ex"><span>${fmtD(o.x.d)} ${esc(o.x.n||'Ingreso')}</span><span style="color:var(--ok)">+${M(o.x.a)} <button class="btn" data-act="idel" data-i="${o.i}">Quitar</button></span></div>`).join(''):'<p class="note">Aún no hay ingresos registrados.</p>'}</div></div>`}
 function saldoCard(k){
  const C={v:{t:'Tarjeta de vales',ini:'vIni',dt:'vDate'},e:{t:'Efectivo',ini:'cIni',dt:'cDate'},d:{t:'Débito',ini:'dIni',dt:'dDate'}}[k];
- const info=accInfo(k),ini=+B[C.ini]||0,total=k==='v'?r2(ini+(info.cnt||0)*(+B.vAmt||1000)):r2(ini+(info.inc||0));
+ const info=accInfo(k),ini=+B[C.ini]||0,total=k==='v'?r2(ini+(info.cnt||0)*(+B.vAmt||0)):r2(ini+(info.inc||0));
  const pct=total>0?Math.max(0,Math.min(100,info.bal/total*100)):0;
  const col=info.bal<0?'var(--bad)':pct<20?'var(--warn)':'var(--ok)';
  const before=B.exp.filter(x=>x.m===k&&(x.d||today())<B[C.dt]).length;
@@ -218,7 +224,7 @@ function decorate(){const app=$('#app');
   app.querySelectorAll('input[placeholder]:not([aria-label]),textarea:not([aria-label])').forEach(i=>{if(!i.closest('label'))i.setAttribute('aria-label',i.placeholder||'Resumen del préstamo')})}
  document.querySelectorAll('table').forEach(t=>{const hs=[...t.querySelectorAll('th')].map(x=>x.textContent);t.querySelectorAll('tr').forEach(r=>{const c=r.children;if(!c.length||c[0].tagName!=='TD')return;if(c.length>=7){[...c].forEach((x,k)=>{if(hs[k]){x.setAttribute('data-label',hs[k]);const i=x.querySelector('input');if(i&&!i.hasAttribute('aria-label'))i.setAttribute('aria-label',hs[k]+' del pago '+c[0].textContent.trim())}});r.classList.add('dr')}else if(c.length===2)r.classList.add('nr')})})}
 function sumText(){const paid=S.pay.reduce((t,p)=>t+(+p.a||0),0),rest=r2(S.total-paid),pc=S.total?(paid/S.total*100).toFixed(1):0;
- let s='Préstamo familiar - resumen al '+fmtD(today())+'\nMonto: '+M(S.total)+'\nPagado: '+M(paid)+'\nSaldo restante: '+M(rest)+' ('+pc+'% liquidado)\n\nPagos:';
+ let s=loanTitle()+' - resumen al '+fmtD(today())+'\nMonto: '+M(S.total)+'\nPagado: '+M(paid)+'\nSaldo restante: '+M(rest)+' ('+pc+'% liquidado)\n\nPagos:';
  S.pay.forEach((p,i)=>{const st=status(i);s+='\n'+(i+1)+') '+fmtD(due(i+1))+' - '+M(sched(i+1))+' - '+(st==='Pagado'?'Pagado'+(p.d?' el '+fmtD(p.d):''):st==='Parcial'?'Parcial ('+M(p.a)+')':st)});return s}
 // ===== Base de datos: Supabase (configurada en config.js) =====
 const CFG=window.FINANZAS_CONFIG||{};
@@ -263,8 +269,8 @@ async function sbPull(){if(!API||!ses||!role||pulling)return;pulling=true;try{
  for(const rw of rows){const v=rw.value||{};
   if(rw.key==='loan'){hasL=true;if(!(S.t>0)||(v.t||0)>S.t){normS(v);persist('fin',v);ch=true}else if(S.t>(v.t||0))apiPut('loan',loanObj())}
   else if(rw.key==='budget'&&can()){hasB=true;if(!(B.t>0)||(v.t||0)>B.t){B=normB(v);persist('finb',B);ch=true;if(B.ui){UI=normUI(B.ui);applyUI();try{localStorage.setItem('ui',JSON.stringify(UI))}catch(e){}}}else if(B.t>(v.t||0))apiPut('budget',B)}}
- if(!hasL&&role!=='guest'){S.t=S.t||Date.now();apiPut('loan',loanObj())}
- if(can()&&!hasB){B.t=B.t||Date.now();if(ses&&ses.user!=='rafa'&&!B.methods){B.onb='pend';onbSel=new Set();ch=true}apiPut('budget',B)}
+ if(!hasL&&role!=='guest'){if(isRafa()&&!(+S.total>0))normS(RDEF);else if(!(+S.total>0))S.start=nx30();S.t=S.t||Date.now();apiPut('loan',loanObj());ch=true}
+ if(can()&&!hasB){if(isRafa()&&!B.amtA&&!B.amtB)B=normB(RBDEF);else if(!isRafa()){const d=today();B.gs=B.cDate=B.vDate=B.dDate=d}B.t=B.t||Date.now();if(ses&&ses.user!=='rafa'&&!B.methods){B.onb='pend';onbSel=new Set();ch=true}apiPut('budget',B)}
  sbOk=true;lastSync=Date.now();if(err&&err.indexOf('nube')>=0)err='';
  const busy=document.activeElement&&/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)&&$('#app').contains(document.activeElement);
  if(firstPull||(ch&&!busy)){if(firstPull)animTab='first';firstPull=false;render()}else renderSync();
@@ -580,7 +586,7 @@ function coachTips(c){const T=[],add=(lvl,title,text,act)=>T.push({lvl,title,tex
   if(dd>=0&&dd<=7)add('aviso',`Tu próximo pago vence ${dd===0?'hoy':dd===1?'mañana':`en ${dd} días`}`,`Pago ${nx+1} de ${M(falta)} el ${fmtD(x.due)}. Si ya lo hiciste, márcalo como pagado.`,'loan')}
  if(!c.ld&&nx>=0){const left=loanIt.length-loanIt.filter(x=>x.st==='Pagado').length,last=loanIt[loanIt.length-1].due;
   add('bien','Así va tu préstamo',`Llevas ${loanIt.filter(x=>x.st==='Pagado').length} de ${loanIt.length} pagos. Si sigues al día, terminas el ${fmtD(last)}: te faltan ${left} ${left===1?'pago':'pagos'}.`,'loan')}
- else if(c.ld)add('bien','Préstamo liquidado','Ya no debes nada del préstamo familiar. Ese dinero ahora puede ir directo a tu ahorro.','bud');
+ else if(c.ld&&+S.total>0)add('bien','Préstamo liquidado','Ya no debes nada del préstamo. Ese dinero ahora puede ir directo a tu ahorro.','bud');
  // Deudas a meses
  c.openD.forEach(D=>{const it=planItemsDebt(D),l=it.filter(x=>x.st==='Atrasado');if(l.length)add('alerta',`${esc(D.n)}: ${l.length===1?'un pago atrasado':`${l.length} pagos atrasados`}`,`Revisa esa compra a meses; los atrasos en tarjetas suelen generar intereses y comisiones.`,'loan')});
  // Carga de deudas vs ingreso
@@ -700,7 +706,7 @@ function planHero(items,total,just,doneTitle,you,extra){const paid=items.reduce(
  return `<div class="hero"><div class="hero-top">${top}<ul class="hm"><li>${you?'Has pagado':'Pagado'} <b>${M(paid)}</b> de ${M(total)}</li><li><b>${nOk}</b> de ${N} pagos hechos</li>${nx>=0?`<li>Siguiente: <b>${fmtD(items[nx].due)}</b>, ${M(Math.max(0,r2(items[nx].amt-items[nx].a)))}</li>`:''}</ul></div>
   <ol class="stamps" aria-label="Tarjeta de pagos">${stamps}</ol>${extra?`<div class="hero-act">${extra}</div>`:''}</div>`}
 function planTable(items){return `<div class="card wrap"><h3>Detalle de pagos</h3><table class="ro"><tr><th>#</th><th>Fecha</th><th>Programado</th><th>Pagado</th><th>Estatus</th></tr>${items.map((x,i)=>`<tr><td>${i+1}</td><td>${fmtD(x.due)}</td><td>${M(x.amt)}</td><td>${x.a>0?M(x.a):'—'}</td><td class="st ${x.st}">${x.st}</td></tr>`).join('')}</table></div>`}
-function acctView(k){B=normB(V.data.data);const info=accInfo(k),C={v:'vIni',e:'cIni',d:'dIni'}[k],ini=+B[C]||0,total=k==='v'?r2(ini+(info.cnt||0)*(+B.vAmt||1000)):r2(ini+(info.inc||0));
+function acctView(k){B=normB(V.data.data);const info=accInfo(k),C={v:'vIni',e:'cIni',d:'dIni'}[k],ini=+B[C]||0,total=k==='v'?r2(ini+(info.cnt||0)*(+B.vAmt||0)):r2(ini+(info.inc||0));
  const pct=total>0?Math.max(0,Math.min(100,info.bal/total*100)):0,col=info.bal<0?'var(--bad)':pct<20?'var(--warn)':'var(--ok)';
  const mv=B.exp.map(x=>({d:x.d,n:x.n,c:x.c,a:-x.a})).concat((B.inc||[]).map(x=>({d:x.d,n:x.n||'Depósito',a:+x.a}))).sort((a,b)=>(b.d||'').localeCompare(a.d||'')).slice(0,25);
  return `<div class="card"><p class="hk">Disponible</p><p class="hv big" style="color:${col}">${M(info.bal)}</p>

@@ -201,7 +201,11 @@ Abre http://localhost:8000. Usa la misma base de datos de Supabase que la versi�
 
 ---
 
-## Novedades (versión 44)
+## Novedades (versión 45)
+
+- Las cuentas nuevas empiezan vacías (sin préstamo y con montos en $0). La cuenta *rafa* conserva sus valores iniciales.
+
+## Versión 44
 
 - Los temas también cambian el fondo de la app.
 - Se quitó la sección Débito: en **Gastos de la quincena** eliges si la compra fue con crédito o débito (los dos cuentan para el límite).
