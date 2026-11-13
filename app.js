@@ -264,6 +264,13 @@ function apiPut(key,obj){if(!ses)return Promise.resolve();return api('/rest/v1/a
  .then(()=>{sbOk=true;lastSync=Date.now();notifyShares(key);setTimeout(()=>pulse($('#sync'),'saved',700));if(err&&err.indexOf('nube')>=0){err='';const m=$('#msg');if(m)m.textContent=''}renderSync()},e=>{if(e.status===401)return;sbOk=false;err='Sin conexión con la nube; tus cambios se guardan en este dispositivo y se subirán al reconectar.';render()})}
 const loanObj=()=>({t:S.t,total:S.total,monthly:S.monthly,day:S.day,start:S.start,pay:S.pay});
 async function loadMe(){if(!ses)return;const old=role;try{await resolveRole()}catch(e){return}if(!ses)return;role=ses.role;if(role!==old||tab==='acct')render()}
+// Repara cuentas creadas con una versión anterior que les puso los valores iniciales de rafa
+function fixRafaDefaults(){let did=false;
+ const untouchedLoan=+S.total===50000&&+S.monthly===5000&&S.pay.length===10&&S.start==='2026-11-30'&&S.pay.every(p=>!(+p.a)&&!p.d&&!p.n);
+ if(untouchedLoan){normS({total:0,monthly:0,day:30,start:nx30(),pay:[]});S.t=Date.now();persist('fin',loanObj());apiPut('loan',loanObj());did=true}
+ const untouchedBud=+B.amtA===5700&&+B.amtB===8700&&+B.sm===2200&&!B.exp.length&&!B.sav.length&&!B.debts.length&&!B.stm.length&&!(B.inc||[]).length;
+ if(untouchedBud){Object.assign(B,{amtA:0,amtB:0,sm:0,vAmt:0});B.t=Date.now();persist('finb',B);apiPut('budget',B);did=true}
+ return did}
 async function sbPull(){if(!API||!ses||!role||pulling)return;pulling=true;try{
  const rows=await api('/rest/v1/app_state?select=key,value&user_id=eq.'+encodeURIComponent(tgt()))||[];let ch=false,hasL=false,hasB=false;
  for(const rw of rows){const v=rw.value||{};
@@ -271,6 +278,7 @@ async function sbPull(){if(!API||!ses||!role||pulling)return;pulling=true;try{
   else if(rw.key==='budget'&&can()){hasB=true;if(!(B.t>0)||(v.t||0)>B.t){B=normB(v);persist('finb',B);ch=true;if(B.ui){UI=normUI(B.ui);applyUI();try{localStorage.setItem('ui',JSON.stringify(UI))}catch(e){}}}else if(B.t>(v.t||0))apiPut('budget',B)}}
  if(!hasL&&role!=='guest'){if(isRafa()&&!(+S.total>0))normS(RDEF);else if(!(+S.total>0))S.start=nx30();S.t=S.t||Date.now();apiPut('loan',loanObj());ch=true}
  if(can()&&!hasB){if(isRafa()&&!B.amtA&&!B.amtB)B=normB(RBDEF);else if(!isRafa()){const d=today();B.gs=B.cDate=B.vDate=B.dDate=d}B.t=B.t||Date.now();if(ses&&ses.user!=='rafa'&&!B.methods){B.onb='pend';onbSel=new Set();ch=true}apiPut('budget',B)}
+ if(!isRafa()&&can()&&fixRafaDefaults())ch=true;
  sbOk=true;lastSync=Date.now();if(err&&err.indexOf('nube')>=0)err='';
  const busy=document.activeElement&&/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)&&$('#app').contains(document.activeElement);
  if(firstPull||(ch&&!busy)){if(firstPull)animTab='first';firstPull=false;render()}else renderSync();
