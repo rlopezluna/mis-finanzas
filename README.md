@@ -201,7 +201,13 @@ Abre http://localhost:8000. Usa la misma base de datos de Supabase que la versi�
 
 ---
 
-## Novedades (versión 43)
+## Novedades (versión 44)
+
+- Los temas también cambian el fondo de la app.
+- Se quitó la sección Débito: en **Gastos de la quincena** eliges si la compra fue con crédito o débito (los dos cuentan para el límite).
+- Las cuentas nuevas eligen sus métodos de pago (vales, efectivo, crédito, débito; al menos uno) y la app muestra solo esas secciones. Se puede cambiar en **Cuenta → Métodos de pago**. La cuenta *rafa* y las que ya existían conservan los cuatro.
+
+## Versión 43
 
 - **Coach financiero** con puntaje de salud y consejos con tus datos.
 - **Apariencia:** modo claro/oscuro, 6 paletas y colores propios.
