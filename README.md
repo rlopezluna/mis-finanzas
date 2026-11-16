@@ -204,7 +204,23 @@ Abre http://localhost:8000. Usa la misma base de datos de Supabase que la versi�
 
 ---
 
-## Novedades (versión 49): pantalla de Inicio para registrar rápido
+## Novedades (versión 51): adelantos y planes largos
+
+- **Adelantos:** si en un pago das más de la mensualidad, lo extra se descuenta de las **últimas** mensualidades. Si pagas el doble en un mes, la última mensualidad desaparece del plan. Funciona en el préstamo y en las compras a meses, y la tarjeta te dice cuánto has adelantado.
+- **Planes largos:** con muchos meses ya no ves una lista gigante. Se muestran los pagos de alrededor del siguiente (y los atrasados) y un botón **Ver los N pagos** para abrir el resto.
+- **Editar movimientos:** cada gasto e ingreso de Inicio tiene **Editar**, y **Ver más movimientos** muestra los anteriores. Los ingresos ahora también se pueden editar en Presupuesto, y un gasto sin concepto ya se puede guardar al editarlo.
+- Arreglo: la fecha elegida en Inicio se ignoraba y todo se guardaba con la fecha de hoy.
+- Campos y listas con el mismo alto en toda la app; en Inicio, Categoría y Fecha del mismo tamaño.
+
+## Versión 50: pasada de diseño profesional
+
+- Cifras con letra sans y números alineados (se ven igual en iPhone, Android y computadora), y sin ".00" cuando el monto es cerrado.
+- El saludo solo aparece en Inicio; las demás pantallas muestran su título. **Cerrar sesión** se movió a **Más → Cuenta**.
+- Se quitaron "Contraer todo / Expandir todo" y las flechas ‹ › de los montos.
+- Selectores (Gasto/Ingreso, Coach/Estadísticas/Cuenta, modo de color) con un solo estilo: pastilla clara sobre un riel.
+- Los valores calculados del Plan del mes se muestran como texto, no como campos.
+
+## Versión 49: pantalla de Inicio para registrar rápido
 
 - Nueva pestaña **Inicio**: arriba, la captura siempre lista. Eliges **Gasto** o **Ingreso**, escribes el monto, tocas la forma de pago y **Guardar** (o Enter). La app recuerda tu última forma de pago y categoría. Al guardar aparece un aviso con **Deshacer**.
 - Debajo: cuánto puedes gastar esta quincena, lo que te queda en **Vales** y **Efectivo**, y tus últimos movimientos.

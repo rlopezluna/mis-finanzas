@@ -9,7 +9,7 @@
 <meta name="referrer" content="no-referrer">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<script src="config.js?v=49"></script>
+<script src="config.js?v=51"></script>
 <style>
 /* ===== Paleta: crema, café, verde olivo y vino ===== */
 :root{
@@ -22,7 +22,7 @@
  --m-c:#2a78d6;--m-d:#eb6834;--m-e:#1baf7a;--m-v:#eda100;--k1:#6250d6;--k2:#008300;--k3:#e87ba4;--k4:#2a78d6;--k5:#e34948;--k6:#1baf7a;--k7:#eda100;
  --serif:"Iowan Old Style","Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;
  --sans:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Roboto,Arial,sans-serif;
- --r:14px;--sh:0 1px 0 rgba(58,42,31,.04),0 6px 20px -12px rgba(58,42,31,.25);
+ --r:14px;--ctl-h:40px;--ctl-w:160px;--sh:0 1px 0 rgba(58,42,31,.04),0 6px 20px -12px rgba(58,42,31,.25);
  color-scheme:light}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){
  --bg:#1e1813;--paper:#251d17;--card:#2a211a;--sunk:#211a14;
@@ -440,9 +440,11 @@ input[type=month]{max-width:200px}
 .hrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
 .hrow input{max-width:none;width:100%;min-height:46px}
 .hrow .btn{min-height:46px;padding:0 20px;font-size:15px}
-.hmeta{display:flex;gap:8px 16px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--mut)}
-.hmeta label{display:flex;align-items:center;gap:6px}
-.hmeta select,.hmeta input,.hmeta input[type=date]{padding:5px 8px;font-size:14px;min-height:34px;max-width:170px;width:auto;box-shadow:none}
+.hmeta{display:flex;gap:10px 18px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--mut)}
+/* Etiqueta de ancho fijo + control de tamaño común: Categoría y Fecha quedan alineadas y del mismo tamaño */
+.hmeta label{display:grid;grid-template-columns:5.6em var(--ctl-w);align-items:center;gap:0}
+.hmeta select,.hmeta input[type=date]{width:var(--ctl-w);min-width:var(--ctl-w);max-width:var(--ctl-w);height:var(--ctl-h);min-height:var(--ctl-h);padding:0 12px;font-size:14px;box-shadow:none;text-align:center;text-align-last:center;display:block;line-height:normal}
+.hmeta input[type=date]::-webkit-date-and-time-value{text-align:center;margin:0}
 .hq{margin:22px 0 0;max-width:560px}
 .hq .hk small{font-size:12px}
 .hbig{font:600 34px/1.05 var(--serif);letter-spacing:-.02em;margin:2px 0 2px;transition:color .2s ease}
@@ -465,8 +467,33 @@ input[type=month]{max-width:200px}
 #toast{display:flex;align-items:center;gap:14px;white-space:nowrap}
 #toast button{background:none;border:0;padding:0;color:color-mix(in srgb,var(--paper) 70%,var(--acc));font:600 14px var(--sans);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 #toast.act{pointer-events:auto}
+/* ===== Pasada de diseño profesional ===== */
+/* Cifras en sans con números tabulares: se leen mejor y se ven igual en iPhone, Android y Windows */
+.big,.hv,.hbig,.htile b,.grid .card b,.card>b,.apn,.hamt span,.hamt input,.cs-ring b,.stamp .sc,.pie b,.rov,tr.dr td:first-child{font-family:var(--sans);font-feature-settings:"tnum" 1;letter-spacing:-.02em}
+.hv,.hbig,.cs-ring b{font-weight:700}.big,.htile b,.grid .card b{font-weight:650}
+.hamt input{font-weight:650;font-size:40px}.hamt span{font-weight:500}
+/* Encabezado: saludo solo en Inicio; en las demás pantallas, un título compacto */
+body.sub #hd{padding:2px 0 10px;border-bottom:0;margin-bottom:2px}
+body.sub #hd .hello{font-size:26px}
+body.sub #hd .date{display:none}
+/* Selectores segmentados: pastilla elevada sobre un riel, en vez de relleno de color */
+.seg{background:var(--sunk);border:0;padding:3px;gap:2px;border-radius:12px;box-shadow:none}
+.seg button,.seg button:first-child{border:0;border-radius:9px;min-height:38px;color:var(--mut)}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(58,42,31,.16),0 0 0 1px var(--line)}
+.cap.inc .seg button.on{color:var(--ok)}
+/* Campos: sin flechas; los de fecha con borde normal; valores calculados como texto */
+.apr{gap:0}.apn{text-align:left;padding-left:12px;font-size:17px}
+.apn.ro{border-style:solid;background:var(--paper);text-align:left}
+.rov{margin:0;min-height:44px;display:flex;align-items:center;font-weight:650;font-size:18px;color:var(--ink)}
+.chip[data-clr]{color:var(--mut);border-color:var(--line2)}
+.hma{display:flex;align-items:center;gap:12px}.hma .linkb{font-size:13px;color:var(--mut)}
+.winb{margin:10px 0 0;text-align:center}.winb .linkb{font-size:14px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-@media (pointer:coarse){.btn,.stp{min-height:44px}}
+@media (pointer:coarse){.btn,.stp{min-height:44px}:root{--ctl-h:44px}}
+/* Alto mínimo común para campos y listas desplegables */
+input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),select{min-height:var(--ctl-h);height:var(--ctl-h);padding-top:0;padding-bottom:0}
+.hamt input{height:auto;min-height:0}
+.hrow .btn{min-height:var(--ctl-h);height:var(--ctl-h)}
 
 /* ----- Celular ----- */
 @media (max-width:699px){
@@ -518,4 +545,4 @@ input[type=month]{max-width:200px}
 <div id="app" tabindex="-1"></div>
 <p class="note" id="sync"></p>
 </main>
-<script src="app.js?v=49"></script></body></html>
+<script src="app.js?v=51"></script></body></html>
