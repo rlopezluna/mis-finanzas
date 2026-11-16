@@ -204,7 +204,15 @@ Abre http://localhost:8000. Usa la misma base de datos de Supabase que la versi�
 
 ---
 
-## Novedades (versión 48): revisión de seguridad y diseño
+## Novedades (versión 49): pantalla de Inicio para registrar rápido
+
+- Nueva pestaña **Inicio**: arriba, la captura siempre lista. Eliges **Gasto** o **Ingreso**, escribes el monto, tocas la forma de pago y **Guardar** (o Enter). La app recuerda tu última forma de pago y categoría. Al guardar aparece un aviso con **Deshacer**.
+- Debajo: cuánto puedes gastar esta quincena, lo que te queda en **Vales** y **Efectivo**, y tus últimos movimientos.
+- Los **ingresos en débito** suman a lo que puedes gastar en la quincena (los gastos con débito salen de ese límite). Los ingresos en efectivo suben tu saldo de efectivo.
+- Menos pestañas: **Inicio, Deudas, Presupuesto y Más** (Coach, Estadísticas y Cuenta).
+- Presupuesto queda para revisar, editar y configurar: ya no repite formularios para agregar gastos.
+
+## Versión 48: revisión de seguridad y diseño
 
 **Ejecuta de nuevo `supabase.sql`** para que se apliquen los cambios de la base de datos.
 

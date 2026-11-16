@@ -9,7 +9,7 @@
 <meta name="referrer" content="no-referrer">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<script src="config.js?v=48"></script>
+<script src="config.js?v=49"></script>
 <style>
 /* ===== Paleta: crema, café, verde olivo y vino ===== */
 :root{
@@ -424,6 +424,47 @@ input[type=month]{max-width:200px}
 .debts-empty{display:flex;justify-content:center;padding:6vh 0 2vh}
 .debts-empty .btn{min-height:50px;padding:12px 22px;font-size:16px}
 @media (max-width:699px){.debts-empty .btn{width:100%}}
+/* ===== Inicio: captura de gastos e ingresos ===== */
+.cap{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px 14px 14px;box-shadow:var(--sh);max-width:560px}
+.seg.hseg{max-width:none;margin:0 0 4px}
+.hamt{display:flex;align-items:baseline;gap:4px;margin:4px 0 8px}
+.hamt span{font:600 28px var(--serif);color:var(--mut)}
+.hamt input{flex:1;min-width:0;max-width:none;width:100%;border:0;background:transparent;box-shadow:none;font:600 40px/1.15 var(--serif);padding:0;color:var(--ink);-moz-appearance:textfield}
+.hamt input::-webkit-outer-spin-button,.hamt input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.hamt input:focus{box-shadow:none;background:transparent}
+.hamt input::placeholder{color:var(--line2);opacity:1}
+.cap.inc .hamt span,.cap.inc .hamt input{color:var(--ok)}
+.hchips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.hchips .chip{min-height:36px;padding:6px 13px;font-weight:600;font-size:14px}
+.hchips .chip.on{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.hrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.hrow input{max-width:none;width:100%;min-height:46px}
+.hrow .btn{min-height:46px;padding:0 20px;font-size:15px}
+.hmeta{display:flex;gap:8px 16px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--mut)}
+.hmeta label{display:flex;align-items:center;gap:6px}
+.hmeta select,.hmeta input,.hmeta input[type=date]{padding:5px 8px;font-size:14px;min-height:34px;max-width:170px;width:auto;box-shadow:none}
+.hq{margin:22px 0 0;max-width:560px}
+.hq .hk small{font-size:12px}
+.hbig{font:600 34px/1.05 var(--serif);letter-spacing:-.02em;margin:2px 0 2px;transition:color .2s ease}
+.hq .bar{height:8px;margin:6px 0 4px}
+.htiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 0;max-width:560px}
+.htile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.htile .hk{display:flex;align-items:center;gap:6px}
+.htile b{display:block;font:600 22px var(--serif)}
+.htile .bar{height:6px;margin:6px 0 2px}.htile .note{font-size:12.5px;margin:0}
+.hlist{margin-top:22px;max-width:560px}
+.hlist h3{font:600 13px var(--sans);color:var(--mut);margin:0 0 2px}
+.hmv>span:first-child>span{display:block}
+.hmv .dot{width:8px;height:8px;flex:0 0 8px;margin-right:7px;vertical-align:1px}
+.hmv small{display:block;color:var(--mut);font-size:12px;font-weight:400}
+.hmv.new{animation:fresh .7s var(--ease)}
+@keyframes fresh{from{background:var(--acc-soft)}to{background:transparent}}
+.shake{animation:shake .3s ease}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.seg.moreseg{max-width:420px;margin:0 0 16px}
+#toast{display:flex;align-items:center;gap:14px;white-space:nowrap}
+#toast button{background:none;border:0;padding:0;color:color-mix(in srgb,var(--paper) 70%,var(--acc));font:600 14px var(--sans);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+#toast.act{pointer-events:auto}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (pointer:coarse){.btn,.stp{min-height:44px}}
 
@@ -468,14 +509,13 @@ input[type=month]{max-width:200px}
 </style></head><body><a class="skip" href="#app">Saltar al contenido</a><main>
 <div id="hd"><div><h1 class="hello" id="hello">Hola</h1><p class="date" id="today"></p></div><button id="lo" data-act="logout" style="display:none">Cerrar sesión</button></div>
 <nav class="tabs" aria-label="Secciones">
-<button data-tab="loan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg><span>Préstamo</span></button>
+<button data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></svg><span>Inicio</span></button>
+<button data-tab="loan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6"/><path d="M9 12h6"/></svg><span>Deudas</span></button>
 <button data-tab="bud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><path d="M16 14.5h2"/><path d="M6 6V5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg><span>Presupuesto</span></button>
-<button data-tab="coach"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span>Coach</span></button>
-<button data-tab="stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg><span>Estadísticas</span></button>
-<button data-tab="acct"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.3-3.6 4.2-5.5 7.5-5.5s6.2 1.9 7.5 5.5"/></svg><span>Cuenta</span></button>
+<button data-tab="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>Más</span></button>
 </nav>
 <p class="note" id="msg" role="status" aria-live="polite"></p>
 <div id="app" tabindex="-1"></div>
 <p class="note" id="sync"></p>
 </main>
-<script src="app.js?v=48"></script></body></html>
+<script src="app.js?v=49"></script></body></html>
