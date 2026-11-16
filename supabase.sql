@@ -224,3 +224,94 @@ revoke all on function private.hacer_invitado(text, text)       from public, ano
 revoke all on function private.quitar_invitado(text)            from public, anon, authenticated;
 revoke all on function private.restablecer_password(text, text) from public, anon, authenticated;
 revoke all on function private.usuarios()                       from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- Atajo de iPhone: una llave por cuenta que SOLO permite agregar gastos o
+-- ingresos (no deja leer nada). Se guarda cifrada (sha256); la llave completa
+-- se muestra una sola vez al crearla. Borrarla corta el acceso al instante.
+-- ---------------------------------------------------------------------
+create table if not exists public.atajo_llaves (
+  owner_id   uuid primary key references auth.users(id) on delete cascade,
+  hash       text not null unique,
+  pista      text not null,
+  created_at timestamptz not null default now(),
+  last_used  timestamptz
+);
+alter table public.atajo_llaves enable row level security;
+revoke all on public.atajo_llaves from public, anon, authenticated;  -- solo se usa con las funciones de abajo
+
+-- Crea (o reemplaza) la llave de la cuenta actual y la devuelve una sola vez
+create or replace function public.crear_llave_atajo()
+returns text language plpgsql volatile security definer set search_path = '' as $$
+declare me uuid := (select auth.uid()); k text;
+begin
+  if me is null then raise exception 'no autorizado'; end if;
+  if exists (select 1 from public.shares where viewer_id = me) then raise exception 'Las cuentas invitadas no pueden usar el atajo'; end if;
+  k := 'mf_' || substr(translate(encode(extensions.gen_random_bytes(36), 'base64'), '+/=', ''), 1, 40);
+  insert into public.atajo_llaves (owner_id, hash, pista) values (me, encode(extensions.digest(k, 'sha256'), 'hex'), right(k, 4))
+    on conflict (owner_id) do update set hash = excluded.hash, pista = excluded.pista, created_at = now(), last_used = null;
+  return k;
+end $$;
+
+create or replace function public.borrar_llave_atajo()
+returns void language sql volatile security definer set search_path = '' as $$
+  delete from public.atajo_llaves where owner_id = (select auth.uid());
+$$;
+
+create or replace function public.estado_llave_atajo()
+returns jsonb language sql stable security definer set search_path = '' as $$
+  select jsonb_build_object('pista', pista, 'creada', created_at, 'usada', last_used)
+  from public.atajo_llaves where owner_id = (select auth.uid());
+$$;
+
+-- La usa el atajo: agrega un gasto (o ingreso) con la fecha de hoy en hora de México.
+-- Nunca devuelve datos de la cuenta; solo un mensaje para la notificación.
+create or replace function public.registrar_por_atajo(llave text, monto numeric, metodo text,
+  concepto text default '', tipo text default 'gasto', categoria text default 'Otro')
+returns jsonb language plpgsql volatile security definer set search_path = '' as $$
+declare o uuid; m text; t text; a numeric; c text; n text; f text; mov jsonb; campo text;
+begin
+  if llave is null or llave !~ '^mf_[A-Za-z0-9]{30,60}$' then
+    return jsonb_build_object('ok', false, 'mensaje', 'Llave no válida. Revisa el atajo.');
+  end if;
+  select owner_id into o from public.atajo_llaves where hash = encode(extensions.digest(llave, 'sha256'), 'hex');
+  if o is null then return jsonb_build_object('ok', false, 'mensaje', 'Esta llave ya no funciona. Crea una nueva en la app.'); end if;
+
+  t := case lower(coalesce(tipo, 'gasto')) when 'ingreso' then 'ingreso' else 'gasto' end;
+  m := case lower(translate(trim(coalesce(metodo, '')), 'ÉéÍíÁá', 'eeiiaa'))
+         when 'v' then 'v' when 'vales' then 'v'
+         when 'e' then 'e' when 'efectivo' then 'e'
+         when 'c' then 'c' when 'credito' then 'c' when 'tarjeta de credito' then 'c'
+         when 'd' then 'd' when 'debito' then 'd' when 'tarjeta de debito' then 'd'
+         else null end;
+  if m is null or (t = 'ingreso' and m not in ('e', 'd')) then
+    return jsonb_build_object('ok', false, 'mensaje', case when t = 'ingreso' then 'Elige Efectivo o Débito.' else 'Elige Vales, Efectivo, Crédito o Débito.' end);
+  end if;
+  a := round(coalesce(monto, 0), 2);
+  if a <= 0 or a >= 10000000 then return jsonb_build_object('ok', false, 'mensaje', 'Escribe un monto mayor a cero.'); end if;
+  n := left(trim(coalesce(concepto, '')), 120);
+  c := case when categoria in ('Comida','Transporte','Casa','Salud','Ropa','Entretenimiento','Otro') then categoria else 'Otro' end;
+  f := to_char((now() at time zone 'America/Mexico_City')::date, 'YYYY-MM-DD');
+
+  if t = 'gasto' then mov := jsonb_build_object('n', n, 'a', a, 'd', f, 'm', m, 'c', c); campo := 'exp';
+  else mov := jsonb_build_object('m', m, 'a', a, 'd', f, 'n', n); campo := 'inc'; end if;
+
+  update public.app_state
+     set value = jsonb_set(value, array[campo], coalesce(value->campo, '[]'::jsonb) || jsonb_build_array(mov))
+   where user_id = o and key = 'budget';
+  if not found then return jsonb_build_object('ok', false, 'mensaje', 'Abre la app una vez antes de usar el atajo.'); end if;
+  update public.atajo_llaves set last_used = now() where owner_id = o;
+
+  return jsonb_build_object('ok', true, 'mensaje',
+    case when t = 'gasto' then 'Gasto' else 'Ingreso' end || ' de $' || to_char(a, 'FM999,999,990.00') || ' guardado (' ||
+    case m when 'v' then 'vales' when 'e' then 'efectivo' when 'c' then 'crédito' else 'débito' end || ').');
+end $$;
+
+revoke all on function public.crear_llave_atajo()  from public, anon;
+revoke all on function public.borrar_llave_atajo() from public, anon;
+revoke all on function public.estado_llave_atajo() from public, anon;
+grant execute on function public.crear_llave_atajo()  to authenticated;
+grant execute on function public.borrar_llave_atajo() to authenticated;
+grant execute on function public.estado_llave_atajo() to authenticated;
+revoke all on function public.registrar_por_atajo(text, numeric, text, text, text, text) from public;
+grant execute on function public.registrar_por_atajo(text, numeric, text, text, text, text) to anon, authenticated;

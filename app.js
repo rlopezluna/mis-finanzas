@@ -318,7 +318,7 @@ async function sbPull(){if(!API||!ses||!role||pulling)return;pulling=true;try{
 }catch(e){if(e.status!==401){sbOk=false;renderSync()}}finally{pulling=false}}
 function renderSync(){const s=$('#sync');if(!s)return;if(!role){s.textContent='';return}
  const h=lastSync?new Date(lastSync).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}):'';
- s.textContent=sbOk?'Guardado en la nube'+(h?' a las '+h.replace(/\.$/,''):'')+'. Lo ves igual en todos tus dispositivos.':'Sin conexión con la nube. Tus cambios se guardan en este dispositivo y se subirán al reconectar.';s.title='Mis finanzas v51'}
+ s.textContent=sbOk?'Guardado en la nube'+(h?' a las '+h.replace(/\.$/,''):'')+'. Lo ves igual en todos tus dispositivos.':'Sin conexión con la nube. Tus cambios se guardan en este dispositivo y se subirán al reconectar.';s.title='Mis finanzas v52'}
 function download(name,text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
 function exportData(){download('mis-finanzas-'+today()+'.json',JSON.stringify({app:'mis-finanzas',formato:1,exportado:new Date().toISOString(),usuario:me&&me.user,loan:loanObj(),budget:B},null,2))}
 function importData(file){const m=$('#imsg');const rd=new FileReader();rd.onload=()=>{try{const j=JSON.parse(rd.result);
@@ -383,7 +383,7 @@ async function doRegister(){const u=($('#lu').value||'').trim().toLowerCase(),pw
  if(pw!==pw2){m.textContent='Las contraseñas no coinciden.';return}
  try{const s=await apiAuth('register',u,pw);wipeLocal();ses=s;await afterAuth()}
  catch(x){m.textContent=x.code==='email_confirm'?'Cuenta creada, pero Supabase pide confirmar el correo. Desactiva "Confirm email" (ver README) y vuelve a intentarlo.':x.code==='signup_disabled'?'El registro de cuentas nuevas está desactivado.':x.code==='user_already_exists'||x.code==='email_exists'?'Ese usuario ya existe. Elige otro.':x.code==='weak_password'?'La contraseña es muy débil; usa una más larga.':x.status===429?'Demasiados intentos. Espera un rato.':x.status>=400&&x.status<500?'Revisa los datos e inténtalo de nuevo.':'No se pudo conectar. Revisa tu internet.'}}
-function logout(){const t=ses;SH={};role='';ses=null;me=null;regMode=false;tab='home';saveSes();wipeLocal();if(t&&API){sbAuthReq('logout?scope=local',null,t.a).catch(()=>{})}$('#app').innerHTML='';render()}
+function logout(){const t=ses;SH={};AT={st:undefined,key:'',err:''};role='';ses=null;me=null;regMode=false;tab='home';saveSes();wipeLocal();if(t&&API){sbAuthReq('logout?scope=local',null,t.a).catch(()=>{})}$('#app').innerHTML='';render()}
 let animTab='first';const RM=matchMedia('(prefers-reduced-motion: reduce)');
 function countUp(el){const txt=el.textContent.trim();if(!/^-?\$/.test(txt))return;const end=parseFloat(txt.replace(/[^0-9.-]/g,''));if(!isFinite(end)||end===0)return;
  const t0=performance.now(),d=500;const step=n=>{const p=Math.min(1,(n-t0)/d),e=1-Math.pow(1-p,3);el.textContent=M(Number.isInteger(end)?Math.round(end*e):end*e);if(p<1&&el.isConnected)requestAnimationFrame(step);else el.textContent=txt};el.textContent=M(0);requestAnimationFrame(step)}
@@ -414,7 +414,7 @@ function render(){pendR=false;
  if(tab==='home'){h+=homeHtml()}
  else if(tab==='loan'){
 h+=loansHtml();
- }else if(tab==='stats'){h+=moreSeg()+statsHtml()}else if(tab==='coach'){h+=moreSeg()+coachHtml()}else if(tab==='acct'){const a=accountHtml(),i=a.indexOf('<!--c1-->');h+=moreSeg()+a.slice(0,i)+appearanceHtml()+(can()?methodsCard():'')+a.slice(i);if(!me)loadMe()}else{
+ }else if(tab==='stats'){h+=moreSeg()+statsHtml()}else if(tab==='coach'){h+=moreSeg()+coachHtml()}else if(tab==='acct'){const a=accountHtml(),i=a.indexOf('<!--c1-->');h+=moreSeg()+a.slice(0,i)+appearanceHtml()+(can()?methodsCard()+atajoCard():'')+a.slice(i);if(!me)loadMe()}else{
   const t=today(),ym=t.slice(0,7),ld=loanDone(),dsum=r2(B.debts.filter(D=>!ddone(D)).reduce((s,D)=>s+mens(D),0)),lp=r2((ld?0:S.monthly)+dsum),dl=ld?'compras a meses':dsum>0?'el préstamo y compras a meses':'el préstamo';
   const P=curPeriod(),bB=r2(B.amtB-lp),bA=r2(B.amtA-B.sm),bud=k=>k==='A'?(B.lq2!=null?+B.lq2:bA):(B.lq1!=null?+B.lq1:bB),gastosM=r2(bud('A')+bud('B')),pre=t<B.gs,budC=pre?0:r2(bud(P.cur.k)+qExtra(P)),budN=pre?bud(curPeriod(B.gs).cur.k):bud(P.next.k);
   const inP=e=>{const d=e.d||t;return d>=P.cur.s&&d<P.next.s};
@@ -460,7 +460,7 @@ h+=loansHtml();
 }
 document.addEventListener('click',e=>{
  const t=e.target.closest('[data-tab],[data-act]');if(!t)return;
- if(t.dataset.tab){let nt=t.dataset.tab;if(nt==='more')nt=can()?moreLast:'acct';if(MORE.includes(nt))moreLast=nt;if(tab!==nt){animTab='tab';window.scrollTo({top:0,behavior:'instant'})}tab=nt;render();return}
+ if(t.dataset.tab){let nt=t.dataset.tab;if(nt!=='acct')AT.key='';if(nt==='more')nt=can()?moreLast:'acct';if(MORE.includes(nt))moreLast=nt;if(tab!==nt){animTab='tab';window.scrollTo({top:0,behavior:'instant'})}tab=nt;render();return}
  const i=+t.dataset.i,a=t.dataset.act;
  if(a==='login'){doLogin();return}
  if(a==='register'){doRegister();return}
@@ -475,6 +475,10 @@ document.addEventListener('click',e=>{
  if(a==='hkind'){HD.kind=t.dataset.v;render();const q=$('#ha');if(q)q.focus();return}
  if(a==='hm'){if(curKind()==='g'){lastM=t.dataset.v;try{localStorage.setItem('lastm',lastM)}catch(x){}}else lastMi=t.dataset.v;render();return}
  if(a==='hsave'){homeSave();return}
+ if(a==='atact'){if(AT.st&&!confirm('Se creará una llave nueva y la anterior dejará de funcionar. ¿Continuar?'))return;activateAtajo();return}
+ if(a==='atcreate'){if(AT.st&&!confirm('Se creará una llave nueva y la anterior dejará de funcionar. Tendrás que cambiarla en tu atajo. ¿Continuar?'))return;createAtajo();return}
+ if(a==='atdel'){if(confirm('¿Borrar la llave? El atajo dejará de funcionar.'))delAtajo();return}
+ if(a==='cpy'){const i=$(t.dataset.t);if(i){i.select();const ok=()=>{const o=t.textContent;t.textContent='¡Copiado!';setTimeout(()=>{t.textContent=o},1500)};if(navigator.clipboard)navigator.clipboard.writeText(i.value).then(ok,()=>{try{document.execCommand('copy');ok()}catch(x){}});else{try{document.execCommand('copy');ok()}catch(x){}}}return}
  if(a==='qm'){qmSel=t.dataset.v;document.querySelectorAll('.seg.qm button').forEach(b=>{const on=b.dataset.v===qmSel;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on)});return}
  if(a==='uimode'){setUI({mode:t.dataset.v},true);return}
  if(a==='uipal'){setUI({pal:t.dataset.v,acc:null,acc2:null},true);return}
@@ -611,6 +615,46 @@ function homeSave(){const ia=$('#ha'),v=parseFloat(ia&&ia.value),k=curKind(),m=c
 document.addEventListener('input',e=>{const t=e.target;if(t.id==='ha')HD.amt=t.value;else if(t.id==='hc')HD.con=t.value;else if(t.id==='hdate')HD.d=t.value;
  else if(t.id==='hcat'){lastC=t.value;try{localStorage.setItem('lastc',lastC)}catch(x){}}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.target.id==='ha'||e.target.id==='hc')){e.preventDefault();homeSave()}});
+
+// ===================== Atajo de iPhone =====================
+// La llave solo permite AGREGAR gastos o ingresos (función registrar_por_atajo de supabase.sql). Se muestra una sola vez.
+let AT={st:undefined,key:'',err:''};
+async function loadAtajo(){if(AT.loading)return;AT.loading=true;try{AT.st=(await api('/rest/v1/rpc/estado_llave_atajo',{method:'POST',body:{}}))||null;AT.err=''}catch(e){AT.st=null;AT.err=e.status===404?'sql':'red'}finally{AT.loading=false}if(tab==='acct')render()}
+async function createAtajo(){try{AT.key=await api('/rest/v1/rpc/crear_llave_atajo',{method:'POST',body:{}});AT.err='';AT.st=undefined;await loadAtajo();return AT.key}catch(e){AT.err=e.status===404?'sql':'red';render();throw e}}
+const ATURL=/^https:\/\/www\.icloud\.com\/shortcuts\/[A-Za-z0-9]{20,64}\/?$/.test(String(CFG.atajoUrl||'').trim())?String(CFG.atajoUrl).trim():'';
+// Copia un texto que todavía no existe (la llave viene de la red) sin perder el permiso del toque: Safari lo exige
+function copyLater(p){try{if(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write)
+ return navigator.clipboard.write([new ClipboardItem({'text/plain':p.then(t=>new Blob([t],{type:'text/plain'}))})]).then(()=>true,()=>p.then(t=>navigator.clipboard.writeText(t)).then(()=>true,()=>false))}catch(e){}
+ return p.then(t=>navigator.clipboard?navigator.clipboard.writeText(t).then(()=>true,()=>false):false,()=>false)}
+async function activateAtajo(){const kp=createAtajo();AT.copied=await copyLater(kp);kp.catch(()=>{});render()}
+async function delAtajo(){try{await api('/rest/v1/rpc/borrar_llave_atajo',{method:'POST',body:{}});AT.key='';AT.st=null;render();toast('Llave borrada')}catch(e){AT.err='red';render()}}
+const cpyRow=(id,val,lbl)=>`<div class="shlink"><input id="${id}" readonly value="${esc(val)}" aria-label="${esc(lbl)}"><button type="button" class="btn" data-act="cpy" data-t="#${id}">Copiar</button></div>`;
+const fdt=s=>s?new Date(s).toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'}):'';
+function atajoCard(){if(!API)return '';if(AT.st===undefined)loadAtajo();
+ let h=`<div class="card"><h3>Atajo de iPhone</h3><p class="note">Registra un gasto sin abrir la app: tocas el atajo, escribes el monto y eliges con qué pagaste. La llave del atajo solo sirve para <b>agregar</b> gastos o ingresos; no deja ver tus datos.</p>`;
+ if(AT.err==='sql')h+=`<p class="note badm">Falta actualizar la base de datos: ejecuta de nuevo supabase.sql en Supabase (ver README).</p>`;
+ else if(AT.err==='red')h+=`<p class="note badm">No se pudo conectar. Revisa tu internet e inténtalo de nuevo.</p>`;
+ if(AT.key&&ATURL)h+=`<div class="atgo"><p class="note okm"><b>${AT.copied?'Listo: tu llave ya está copiada.':'Tu llave está lista.'}</b></p><ol>${AT.copied?'':'<li>Copia tu llave con el botón de abajo.</li>'}<li>Toca <b>Abrir el atajo</b>.</li><li>Cuando te pida la llave, mantén presionado y elige <b>Pegar</b>.</li><li>Toca <b>Agregar atajo</b>. ¡Listo!</li></ol>
+  <a class="btn f go" href="${esc(ATURL)}" target="_blank" rel="noopener">Abrir el atajo</a>
+  <p class="note" style="margin-top:12px">${AT.copied?'Si no se pegó, cópiala aquí. ':''}Por seguridad la llave no se vuelve a mostrar.</p>${cpyRow('atk',AT.key,'Llave del atajo')}</div>`;
+ else if(AT.key)h+=`<p class="note okm" style="margin-top:12px"><b>Tu llave nueva.</b> Cópiala ahora y pégala en el atajo: por seguridad no se vuelve a mostrar.</p>${cpyRow('atk',AT.key,'Llave del atajo')}`;
+ else if(AT.st)h+=`<p class="note" style="margin-top:12px">Tienes una llave que termina en <b>…${esc(AT.st.pista)}</b>, creada el ${fdt(AT.st.creada)}. Último uso: ${AT.st.usada?fdt(AT.st.usada):'todavía no se usa'}.</p>`;
+ h+=`<div class="row" style="margin-top:10px">${AT.st===undefined&&!AT.err?'<span class="note">Cargando…</span>':`${ATURL&&!AT.key?`<button type="button" class="btn f" data-act="atact">${AT.st?'Volver a activar en este iPhone':'Activar atajo en este iPhone'}</button>`:''}${ATURL?'':`<button type="button" class="btn f" data-act="atcreate">${AT.st||AT.key?'Crear una llave nueva':'Crear llave del atajo'}</button>`}${AT.st||AT.key?'<button type="button" class="btn del" data-act="atdel">Borrar llave</button>':''}`}</div>`;
+ if(ATURL)h+=`<p class="note" style="margin-top:12px">Para abrirlo con dos toques en la parte de atrás del iPhone (SE de 2.ª o 3.ª generación): <b>Ajustes → Accesibilidad → Tocar → Tocar atrás → Doble toque → Gasto</b>.</p>`;
+ if(AT.st||AT.key)h+=`<details class="steps"><summary>${ATURL?'Prefiero armarlo a mano':'Cómo armar el atajo en tu iPhone'}</summary><ol>
+  <li>Abre la app <b>Atajos</b> y toca <b>+</b>.</li>
+  <li>Agrega <b>Pedir entrada</b>: tipo <b>Número</b>, pregunta "¿Cuánto gastaste?".</li>
+  <li>Agrega <b>Lista</b> con: Vales, Efectivo, Crédito y Débito. Después agrega <b>Elegir de la lista</b> con la pregunta "¿Con qué pagaste?".</li>
+  <li>Agrega <b>Pedir entrada</b>: tipo <b>Texto</b>, pregunta "¿En qué? (opcional)".</li>
+  <li>Agrega <b>Obtener contenido de URL</b> y pega esta dirección:${cpyRow('aturl',SB.url+'/rest/v1/rpc/registrar_por_atajo','Dirección del atajo')}
+   Toca la flecha para ver las opciones: <b>Método</b> POST. En <b>Encabezados</b> agrega <code>apikey</code> con este valor:${cpyRow('atapi',SB.key,'Clave pública')}
+   En <b>Cuerpo de la solicitud</b> elige <b>JSON</b> y agrega 4 campos: <code>llave</code> (Texto) con tu llave; <code>monto</code> (Número) con la <i>Entrada proporcionada</i> del paso 2; <code>metodo</code> (Texto) con el <i>Elemento elegido</i>; <code>concepto</code> (Texto) con la <i>Entrada proporcionada</i> del paso 4.</li>
+  <li>Agrega <b>Obtener valor del diccionario</b> con la clave <code>mensaje</code>.</li>
+  <li>Agrega <b>Mostrar notificación</b> con el <i>Valor del diccionario</i>.</li>
+  <li>Llámalo "Gasto". Para abrirlo rápido: en el atajo toca compartir → <b>Agregar a pantalla de inicio</b>. En el iPhone SE de 2.ª o 3.ª generación también puedes usar <b>Ajustes → Accesibilidad → Tocar → Tocar atrás → Doble toque</b> y elegir "Gasto".</li></ol>
+  <p class="note"><b>Para ingresos:</b> duplica el atajo, deja en la lista solo Efectivo y Débito, y agrega al JSON el campo <code>tipo</code> (Texto) con el valor <code>ingreso</code>.</p>
+  <p class="note">Los gastos del atajo quedan con la fecha de hoy y la categoría "Otro"; puedes cambiarla con Editar en Inicio.</p></details>`;
+ return h+'</div>'}
 
 // ===================== Apariencia: modo y colores =====================
 const PALS={

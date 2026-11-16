@@ -9,7 +9,7 @@
 <meta name="referrer" content="no-referrer">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<script src="config.js?v=51"></script>
+<script src="config.js?v=52"></script>
 <style>
 /* ===== Paleta: crema, café, verde olivo y vino ===== */
 :root{
@@ -488,6 +488,14 @@ body.sub #hd .date{display:none}
 .chip[data-clr]{color:var(--mut);border-color:var(--line2)}
 .hma{display:flex;align-items:center;gap:12px}.hma .linkb{font-size:13px;color:var(--mut)}
 .winb{margin:10px 0 0;text-align:center}.winb .linkb{font-size:14px}
+.steps{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+.steps>summary{cursor:pointer;font-weight:600;color:var(--wine);padding:6px 0}
+.steps ol{margin:8px 0 10px;padding-left:20px;display:grid;gap:10px;font-size:14.5px}
+.steps code{background:var(--sunk);padding:1px 6px;border-radius:6px;font-size:13px}
+.steps .shlink{margin:8px 0}
+.atgo{margin-top:12px;padding:14px;border-radius:14px;background:var(--acc-soft)}
+.atgo ol{margin:6px 0 12px;padding-left:20px;display:grid;gap:6px;font-size:15px}
+.atgo .go{width:100%;min-height:48px;font-size:16px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (pointer:coarse){.btn,.stp{min-height:44px}:root{--ctl-h:44px}}
 /* Alto mínimo común para campos y listas desplegables */
@@ -545,4 +553,4 @@ input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),
 <div id="app" tabindex="-1"></div>
 <p class="note" id="sync"></p>
 </main>
-<script src="app.js?v=51"></script></body></html>
+<script src="app.js?v=52"></script></body></html>

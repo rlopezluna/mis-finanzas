@@ -4,5 +4,7 @@
 // las reglas de seguridad (RLS) del archivo supabase.sql. NUNCA pongas aquí la "service_role / secret key".
 window.FINANZAS_CONFIG = {
   supabaseUrl: "https://qgbwrdunmdywekdquyxi.supabase.co",
-  supabaseKey: "sb_publishable_BoSRUuFaVH-DOeIsuuwTgA_x87NbyLT"
+  supabaseKey: "sb_publishable_BoSRUuFaVH-DOeIsuuwTgA_x87NbyLT",
+  // Enlace de iCloud del atajo modelo "Gasto" (Atajos → compartir → Copiar enlace de iCloud). Vacío = solo pasos manuales.
+  atajoUrl: ""
 };
