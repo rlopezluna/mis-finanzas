@@ -1,5 +1,7 @@
 // Mis finanzas — lógica de la app
 // Valores iniciales: todas las cuentas nuevas empiezan vacías (las cifras personales viven solo en la nube)
+// Versión de la app. Al publicar cambios, súbela aquí, en version.json y en los ?v= de index.html
+const APPV=53;
 const DEF={total:0,monthly:0,day:30,start:'2026-11-30',pay:[]};
 const BDEF={cIni:0,cDate:'2026-11-02',dIni:0,dDate:'2026-11-02',vIni:0,vDate:'2026-11-02',vAmt:0,gs:'2026-10-30',dayA:15,amtA:0,dayB:30,amtB:0,sm:0,exp:[],sav:[],goal:0,debts:[],stm:[]};
 const isRafa=()=>!!ses&&ses.user==='rafa';
@@ -318,7 +320,7 @@ async function sbPull(){if(!API||!ses||!role||pulling)return;pulling=true;try{
 }catch(e){if(e.status!==401){sbOk=false;renderSync()}}finally{pulling=false}}
 function renderSync(){const s=$('#sync');if(!s)return;if(!role){s.textContent='';return}
  const h=lastSync?new Date(lastSync).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}):'';
- s.textContent=sbOk?'Guardado en la nube'+(h?' a las '+h.replace(/\.$/,''):'')+'. Lo ves igual en todos tus dispositivos.':'Sin conexión con la nube. Tus cambios se guardan en este dispositivo y se subirán al reconectar.';s.title='Mis finanzas v52'}
+ s.textContent=sbOk?'Guardado en la nube'+(h?' a las '+h.replace(/\.$/,''):'')+'. Lo ves igual en todos tus dispositivos.':'Sin conexión con la nube. Tus cambios se guardan en este dispositivo y se subirán al reconectar.';s.title='Mis finanzas v'+APPV}
 function download(name,text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
 function exportData(){download('mis-finanzas-'+today()+'.json',JSON.stringify({app:'mis-finanzas',formato:1,exportado:new Date().toISOString(),usuario:me&&me.user,loan:loanObj(),budget:B},null,2))}
 function importData(file){const m=$('#imsg');const rd=new FileReader();rd.onload=()=>{try{const j=JSON.parse(rd.result);
@@ -329,7 +331,7 @@ function importData(file){const m=$('#imsg');const rd=new FileReader();rd.onload
   const m2=$('#imsg');if(m2){m2.className='note okm';m2.textContent='Datos restaurados.'}
  }catch(e){if(m){m.className='note badm';m.textContent='El archivo no es un respaldo válido de Mis finanzas.'}}};rd.readAsText(file)}
 function accountHtml(){const g=role==='guest';
- return `<div class="card"><h3>Mi cuenta</h3><p class="note">Usuario: <strong>${esc(me?me.user:(ses?ses.user:'…'))}</strong>${g?'. Eres invitado'+(me&&me.owner?' de <strong>'+esc(me.owner)+'</strong>':'')+'. Puedes ver y editar su préstamo.':''}</p><div class="row" style="margin:12px 0 0"><button type="button" class="btn" data-act="logout">Cerrar sesión</button></div></div><!--c1-->
+ return `<div class="card"><h3>Mi cuenta</h3><p class="note">Usuario: <strong>${esc(me?me.user:(ses?ses.user:'…'))}</strong>${g?'. Eres invitado'+(me&&me.owner?' de <strong>'+esc(me.owner)+'</strong>':'')+'. Puedes ver y editar su préstamo.':''}</p><p class="note">Versión ${APPV} de la app.</p><div class="row" style="margin:12px 0 0"><button type="button" class="btn" data-act="logout">Cerrar sesión</button></div></div><!--c1-->
  <div class="card"><h3>Cambiar contraseña</h3><div class="pg">
   <div class="fl"><span>Contraseña actual</span><input id="pc" type="password" autocomplete="current-password"></div>
   <div class="fl"><span>Nueva contraseña</span><input id="pn" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres"></div>
@@ -462,6 +464,7 @@ document.addEventListener('click',e=>{
  const t=e.target.closest('[data-tab],[data-act]');if(!t)return;
  if(t.dataset.tab){let nt=t.dataset.tab;if(nt!=='acct')AT.key='';if(nt==='more')nt=can()?moreLast:'acct';if(MORE.includes(nt))moreLast=nt;if(tab!==nt){animTab='tab';window.scrollTo({top:0,behavior:'instant'})}tab=nt;render();return}
  const i=+t.dataset.i,a=t.dataset.act;
+ if(a==='upd'){goUpdate();return}
  if(a==='login'){doLogin();return}
  if(a==='register'){doRegister();return}
  if(a==='regtoggle'){regMode=!regMode;$('#app').innerHTML='';render();return}
@@ -888,6 +891,19 @@ function startViewer(){document.body.classList.add('viewer');document.title='Mis
  setInterval(()=>{if(!document.hidden)fetchView()},5000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchView()});window.addEventListener('online',fetchView)}
 
 window.addEventListener('hashchange',()=>{if(/^#v=/.test(location.hash)||VIEW)location.reload()});
+
+// ===================== Aviso de versión nueva =====================
+// El iPhone puede conservar la página anterior un buen rato. La app revisa version.json (sin caché) al abrir,
+// al volver a ella y cada 30 minutos; si hay una más nueva muestra un aviso con "Actualizar".
+let newV=0;
+if(/[?&]v=\d+/.test(location.search))history.replaceState(null,'',location.pathname+location.hash);
+async function checkVersion(){try{const r=await fetch('version.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const v=+((await r.json())||{}).v||0;
+ if(v>APPV&&v!==newV){newV=v;let el=$('#upd');if(!el){el=document.createElement('div');el.id='upd';el.setAttribute('role','status');document.body.appendChild(el)}
+  el.innerHTML='<span>Hay una versión nueva.</span><button type="button" data-act="upd">Actualizar</button>';requestAnimationFrame(()=>el.classList.add('show'))}}catch(e){}}
+// Abre la página con ?v=N: así el navegador no usa la copia guardada de index.html
+function goUpdate(){location.replace(location.pathname+'?v='+(newV||Date.now())+location.hash)}
+setTimeout(checkVersion,2500);setInterval(()=>{if(!document.hidden)checkVersion()},30*60*1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkVersion()});
 if(VIEW){startViewer()}else{
 if(API){
  fetch(SB.url+'/auth/v1/settings',{headers:{apikey:SB.key}}).then(r=>r.json()).then(j=>{canReg=!j.disable_signup;if(!role){$('#app').innerHTML='';render()}}).catch(()=>{});
