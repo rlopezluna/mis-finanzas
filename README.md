@@ -204,7 +204,15 @@ Abre http://localhost:8000. Usa la misma base de datos de Supabase que la versi�
 
 ---
 
-## Novedades (versión 50): pasada de diseño profesional
+## Novedades (versión 51): adelantos y planes largos
+
+- **Adelantos:** si en un pago das más de la mensualidad, lo extra se descuenta de las **últimas** mensualidades. Si pagas el doble en un mes, la última mensualidad desaparece del plan. Funciona en el préstamo y en las compras a meses, y la tarjeta te dice cuánto has adelantado.
+- **Planes largos:** con muchos meses ya no ves una lista gigante. Se muestran los pagos de alrededor del siguiente (y los atrasados) y un botón **Ver los N pagos** para abrir el resto.
+- **Editar movimientos:** cada gasto e ingreso de Inicio tiene **Editar**, y **Ver más movimientos** muestra los anteriores. Los ingresos ahora también se pueden editar en Presupuesto, y un gasto sin concepto ya se puede guardar al editarlo.
+- Arreglo: la fecha elegida en Inicio se ignoraba y todo se guardaba con la fecha de hoy.
+- Campos y listas con el mismo alto en toda la app; en Inicio, Categoría y Fecha del mismo tamaño.
+
+## Versión 50: pasada de diseño profesional
 
 - Cifras con letra sans y números alineados (se ven igual en iPhone, Android y computadora), y sin ".00" cuando el monto es cerrado.
 - El saludo solo aparece en Inicio; las demás pantallas muestran su título. **Cerrar sesión** se movió a **Más → Cuenta**.
