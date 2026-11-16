@@ -9,7 +9,7 @@
 <meta name="referrer" content="no-referrer">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<script src="config.js?v=49"></script>
+<script src="config.js?v=50"></script>
 <style>
 /* ===== Paleta: crema, café, verde olivo y vino ===== */
 :root{
@@ -465,6 +465,25 @@ input[type=month]{max-width:200px}
 #toast{display:flex;align-items:center;gap:14px;white-space:nowrap}
 #toast button{background:none;border:0;padding:0;color:color-mix(in srgb,var(--paper) 70%,var(--acc));font:600 14px var(--sans);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 #toast.act{pointer-events:auto}
+/* ===== Pasada de diseño profesional ===== */
+/* Cifras en sans con números tabulares: se leen mejor y se ven igual en iPhone, Android y Windows */
+.big,.hv,.hbig,.htile b,.grid .card b,.card>b,.apn,.hamt span,.hamt input,.cs-ring b,.stamp .sc,.pie b,.rov,tr.dr td:first-child{font-family:var(--sans);font-feature-settings:"tnum" 1;letter-spacing:-.02em}
+.hv,.hbig,.cs-ring b{font-weight:700}.big,.htile b,.grid .card b{font-weight:650}
+.hamt input{font-weight:650;font-size:40px}.hamt span{font-weight:500}
+/* Encabezado: saludo solo en Inicio; en las demás pantallas, un título compacto */
+body.sub #hd{padding:2px 0 10px;border-bottom:0;margin-bottom:2px}
+body.sub #hd .hello{font-size:26px}
+body.sub #hd .date{display:none}
+/* Selectores segmentados: pastilla elevada sobre un riel, en vez de relleno de color */
+.seg{background:var(--sunk);border:0;padding:3px;gap:2px;border-radius:12px;box-shadow:none}
+.seg button,.seg button:first-child{border:0;border-radius:9px;min-height:38px;color:var(--mut)}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(58,42,31,.16),0 0 0 1px var(--line)}
+.cap.inc .seg button.on{color:var(--ok)}
+/* Campos: sin flechas; los de fecha con borde normal; valores calculados como texto */
+.apr{gap:0}.apn{text-align:left;padding-left:12px;font-size:17px}
+.apn.ro{border-style:solid;background:var(--paper);text-align:left}
+.rov{margin:0;min-height:44px;display:flex;align-items:center;font-weight:650;font-size:18px;color:var(--ink)}
+.chip[data-clr]{color:var(--mut);border-color:var(--line2)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (pointer:coarse){.btn,.stp{min-height:44px}}
 
@@ -518,4 +537,4 @@ input[type=month]{max-width:200px}
 <div id="app" tabindex="-1"></div>
 <p class="note" id="sync"></p>
 </main>
-<script src="app.js?v=49"></script></body></html>
+<script src="app.js?v=50"></script></body></html>
