@@ -443,6 +443,9 @@ input[type=month]{max-width:200px}
 .hmeta{display:flex;gap:8px 16px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--mut)}
 .hmeta label{display:flex;align-items:center;gap:6px}
 .hmeta select,.hmeta input,.hmeta input[type=date]{padding:5px 8px;font-size:14px;min-height:34px;max-width:170px;width:auto;box-shadow:none}
+/* Fecha: texto centrado y caja un poco más ancha que la fecha (también en iPhone, que la alinea a la izquierda) */
+.hmeta input[type=date]{display:inline-block;width:auto;min-width:10.5em;max-width:none;padding:6px 14px;text-align:center}
+.hmeta input[type=date]::-webkit-date-and-time-value{text-align:center;margin:0}
 .hq{margin:22px 0 0;max-width:560px}
 .hq .hk small{font-size:12px}
 .hbig{font:600 34px/1.05 var(--serif);letter-spacing:-.02em;margin:2px 0 2px;transition:color .2s ease}

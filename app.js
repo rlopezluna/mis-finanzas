@@ -565,7 +565,7 @@ function homeHtml(){const k=curKind(),L=k==='g'?GM():IM(),m=curM(),q=quincena(),
   <div class="hamt"><span aria-hidden="true">$</span><input id="ha" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0" aria-label="Monto ${k==='g'?'del gasto':'del ingreso'}" value="${esc(HD.amt)}"></div>
   ${chips}
   <div class="hrow"><input id="hc" maxlength="120" placeholder="${k==='g'?'¿En qué? (opcional)':'¿De quién? (opcional)'}" aria-label="Concepto" value="${esc(HD.con)}"><button type="button" class="btn f" data-act="hsave">Guardar</button></div>
-  <div class="hmeta">${k==='g'?`<label>Categoría <select id="hcat">${CATS.map(c=>`<option${c===lastC?' selected':''}>${c}</option>`).join('')}</select></label>`:''}<label>Fecha <input id="hd" type="date" value="${esc(HD.d||t)}"></label></div></div>`;
+  <div class="hmeta">${k==='g'?`<label>Categoría <select id="hcat">${CATS.map(c=>`<option${c===lastC?' selected':''}>${c}</option>`).join('')}</select></label>`:''}<label>Fecha <input id="hdate" type="date" value="${esc(HD.d||t)}"></label></div></div>`;
  if(QM().length)h+=`<section class="hq"><p class="hk">Puedes gastar esta quincena <small>(crédito y débito)</small></p>
   <p class="hbig" style="color:${q.col}">${M(q.left)}</p><div class="bar"><i style="width:${q.pg}%;background:${q.col}"></i></div>
   <p class="note">${q.pre?'El control de gastos inicia el '+fmtD(B.gs)+'.':(q.left<0?'Te pasaste '+M(-q.left)+'. ':'')+'De '+M(q.budC)+', llevas '+M(q.ex)+(q.extra>0?'. Incluye '+M(q.extra)+' de ingresos en débito.':'.')}</p></section>`;
@@ -577,12 +577,12 @@ function homeHtml(){const k=curKind(),L=k==='g'?GM():IM(),m=curM(),q=quincena(),
   return `<div class="ex hmv${x===hFresh?' new':''}"><span><span><i class="dot" style="background:${MC[x.m]||'var(--mut)'}"></i>${esc(x.n||(inc?'Ingreso':x.c||'Gasto'))}<small>${inc?'Ingreso, ':''}${METH[x.m]||''}${!inc&&x.c?', '+esc(x.c):''}, ${dayLbl(x.d)}</small></span></span><b class="${inc?'okm':''}">${inc?'+':'−'}${M(x.a)}</b></div>`}).join(''):'<p class="note">Aquí verás lo que registres.</p>'}
   ${mv.length?'<p class="note"><button type="button" class="linkb" data-tab="bud">Ver y editar en Presupuesto</button></p>':''}</section>`;
  hFresh=null;return h}
-function homeSave(){const ia=$('#ha'),v=parseFloat(ia&&ia.value),k=curKind(),m=curM(),n=(($('#hc')||{}).value||'').trim().slice(0,120),d=sdt(($('#hd')||{}).value,today());
+function homeSave(){const ia=$('#ha'),v=parseFloat(ia&&ia.value),k=curKind(),m=curM(),n=(($('#hc')||{}).value||'').trim().slice(0,120),d=sdt(($('#hdate')||{}).value,today());
  if(!(v>0)){if(ia){ia.focus();ia.classList.add('shake');setTimeout(()=>ia.classList.remove('shake'),400)}return}
  let x;if(k==='g'){x={n,a:r2(v),d,m,c:($('#hcat')||{}).value||'Otro'};B.exp.push(x)}else{x={m,a:r2(v),d,n};B.inc=(B.inc||[]).concat([x])}
  HD.amt='';HD.con='';HD.d='';hFresh=x;saveB();
  toast((k==='g'?'Gasto':'Ingreso')+' de '+M(x.a)+' guardado',()=>{if(k==='g')B.exp=B.exp.filter(z=>z!==x);else B.inc=(B.inc||[]).filter(z=>z!==x);saveB();toast('Se quitó el '+(k==='g'?'gasto':'ingreso'))})}
-document.addEventListener('input',e=>{const t=e.target;if(t.id==='ha')HD.amt=t.value;else if(t.id==='hc')HD.con=t.value;else if(t.id==='hd')HD.d=t.value;
+document.addEventListener('input',e=>{const t=e.target;if(t.id==='ha')HD.amt=t.value;else if(t.id==='hc')HD.con=t.value;else if(t.id==='hdate')HD.d=t.value;
  else if(t.id==='hcat'){lastC=t.value;try{localStorage.setItem('lastc',lastC)}catch(x){}}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.target.id==='ha'||e.target.id==='hc')){e.preventDefault();homeSave()}});
 
