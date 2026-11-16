@@ -204,7 +204,15 @@ Abre http://localhost:8000. Usa la misma base de datos de Supabase que la versi�
 
 ---
 
-## Novedades (versión 53): aviso de versión nueva
+## Novedades (versión 54): el atajo respeta tus formas de pago
+
+**Ejecuta de nuevo `supabase.sql`.**
+
+- El atajo pregunta a la app qué formas de pago usas y solo te ofrece esas: si no tienes vales, no aparece "Vales".
+- Si alguien elige una forma de pago que no tiene activada, no se guarda nada y la notificación dice cuál puede elegir.
+- Los pasos para armar el atajo cambiaron (dos acciones más al inicio). Están en **Más → Cuenta → Atajo de iPhone**.
+
+## Versión 53: aviso de versión nueva
 
 - La app revisa sola si hay una versión nueva (al abrirla, al volver a ella y cada 30 minutos) y muestra **Hay una versión nueva → Actualizar**. Así el iPhone ya no se queda con una copia vieja.
 - En **Más → Cuenta** aparece el número de versión que tienes.

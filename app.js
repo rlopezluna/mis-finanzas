@@ -1,7 +1,7 @@
 // Mis finanzas — lógica de la app
 // Valores iniciales: todas las cuentas nuevas empiezan vacías (las cifras personales viven solo en la nube)
 // Versión de la app. Al publicar cambios, súbela aquí, en version.json y en los ?v= de index.html
-const APPV=53;
+const APPV=54;
 const DEF={total:0,monthly:0,day:30,start:'2026-11-30',pay:[]};
 const BDEF={cIni:0,cDate:'2026-11-02',dIni:0,dDate:'2026-11-02',vIni:0,vDate:'2026-11-02',vAmt:0,gs:'2026-10-30',dayA:15,amtA:0,dayB:30,amtB:0,sm:0,exp:[],sav:[],goal:0,debts:[],stm:[]};
 const isRafa=()=>!!ses&&ses.user==='rafa';
@@ -646,16 +646,20 @@ function atajoCard(){if(!API)return '';if(AT.st===undefined)loadAtajo();
  if(ATURL)h+=`<p class="note" style="margin-top:12px">Para abrirlo con dos toques en la parte de atrás del iPhone (SE de 2.ª o 3.ª generación): <b>Ajustes → Accesibilidad → Tocar → Tocar atrás → Doble toque → Gasto</b>.</p>`;
  if(AT.st||AT.key)h+=`<details class="steps"><summary>${ATURL?'Prefiero armarlo a mano':'Cómo armar el atajo en tu iPhone'}</summary><ol>
   <li>Abre la app <b>Atajos</b> y toca <b>+</b>.</li>
+  <li>Agrega <b>Texto</b> y pega tu llave.</li>
+  <li>Agrega <b>Obtener contenido de URL</b> con esta dirección:${cpyRow('aturl1',SB.url+'/rest/v1/rpc/metodos_atajo','Dirección de la lista de métodos')}
+   Toca la flecha: <b>Método</b> POST; en <b>Encabezados</b> agrega <code>apikey</code> con este valor:${cpyRow('atapi',SB.key,'Clave pública')}
+   En <b>Cuerpo de la solicitud</b> elige <b>JSON</b> y agrega el campo <code>llave</code> (Texto) con la variable <i>Texto</i> del paso 2.</li>
+  <li>Agrega <b>Obtener valor del diccionario</b> con la clave <code>metodos</code>. Así el atajo solo te ofrece tus formas de pago.</li>
   <li>Agrega <b>Pedir entrada</b>: tipo <b>Número</b>, pregunta "¿Cuánto gastaste?".</li>
-  <li>Agrega <b>Lista</b> con: Vales, Efectivo, Crédito y Débito. Después agrega <b>Elegir de la lista</b> con la pregunta "¿Con qué pagaste?".</li>
+  <li>Agrega <b>Elegir de la lista</b> con el <i>Valor del diccionario</i> del paso 4 y la pregunta "¿Con qué pagaste?".</li>
   <li>Agrega <b>Pedir entrada</b>: tipo <b>Texto</b>, pregunta "¿En qué? (opcional)".</li>
-  <li>Agrega <b>Obtener contenido de URL</b> y pega esta dirección:${cpyRow('aturl',SB.url+'/rest/v1/rpc/registrar_por_atajo','Dirección del atajo')}
-   Toca la flecha para ver las opciones: <b>Método</b> POST. En <b>Encabezados</b> agrega <code>apikey</code> con este valor:${cpyRow('atapi',SB.key,'Clave pública')}
-   En <b>Cuerpo de la solicitud</b> elige <b>JSON</b> y agrega 4 campos: <code>llave</code> (Texto) con tu llave; <code>monto</code> (Número) con la <i>Entrada proporcionada</i> del paso 2; <code>metodo</code> (Texto) con el <i>Elemento elegido</i>; <code>concepto</code> (Texto) con la <i>Entrada proporcionada</i> del paso 4.</li>
+  <li>Agrega otro <b>Obtener contenido de URL</b> con esta dirección:${cpyRow('aturl',SB.url+'/rest/v1/rpc/registrar_por_atajo','Dirección para registrar')}
+   Igual que en el paso 3: POST y el encabezado <code>apikey</code>. En el cuerpo <b>JSON</b> agrega 4 campos: <code>llave</code> (Texto) con la variable <i>Texto</i> del paso 2; <code>monto</code> (Número) con la <i>Entrada proporcionada</i> del paso 5; <code>metodo</code> (Texto) con el <i>Elemento elegido</i>; <code>concepto</code> (Texto) con la <i>Entrada proporcionada</i> del paso 7.</li>
   <li>Agrega <b>Obtener valor del diccionario</b> con la clave <code>mensaje</code>.</li>
-  <li>Agrega <b>Mostrar notificación</b> con el <i>Valor del diccionario</i>.</li>
+  <li>Agrega <b>Mostrar notificación</b> con ese <i>Valor del diccionario</i>.</li>
   <li>Llámalo "Gasto". Para abrirlo rápido: en el atajo toca compartir → <b>Agregar a pantalla de inicio</b>. En el iPhone SE de 2.ª o 3.ª generación también puedes usar <b>Ajustes → Accesibilidad → Tocar → Tocar atrás → Doble toque</b> y elegir "Gasto".</li></ol>
-  <p class="note"><b>Para ingresos:</b> duplica el atajo, deja en la lista solo Efectivo y Débito, y agrega al JSON el campo <code>tipo</code> (Texto) con el valor <code>ingreso</code>.</p>
+  <p class="note"><b>Para ingresos:</b> duplica el atajo y agrega el campo <code>tipo</code> (Texto) con el valor <code>ingreso</code> en los dos cuerpos JSON (pasos 3 y 8). La lista mostrará solo Efectivo y Débito, si los usas.</p>
   <p class="note">Los gastos del atajo quedan con la fecha de hoy y la categoría "Otro"; puedes cambiarla con Editar en Inicio.</p></details>`;
  return h+'</div>'}
 

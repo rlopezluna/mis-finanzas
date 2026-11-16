@@ -264,12 +264,46 @@ returns jsonb language sql stable security definer set search_path = '' as $$
   from public.atajo_llaves where owner_id = (select auth.uid());
 $$;
 
+-- Formas de pago activas de un presupuesto, en orden v, e, c, d. Sin elección guardada = las cuatro.
+create or replace function private.metodos_activos(b jsonb)
+returns text[] language sql immutable set search_path = '' as $$
+  select coalesce(nullif(array(select x from unnest(array['v','e','c','d']) x
+    where jsonb_typeof(b->'methods') <> 'array' or (b->'methods') ? x), '{}'), array['v','e','c','d']);
+$$;
+create or replace function private.nombres_metodos(ms text[], sep text default ', ')
+returns text language sql immutable set search_path = '' as $$
+  select string_agg(case x when 'v' then 'Vales' when 'e' then 'Efectivo' when 'c' then 'Crédito' else 'Débito' end, sep order by array_position(array['v','e','c','d'], x))
+  from unnest(ms) x;
+$$;
+revoke all on function private.metodos_activos(jsonb) from public, anon, authenticated;
+revoke all on function private.nombres_metodos(text[], text) from public, anon, authenticated;
+
+-- La usa el atajo al abrirse: la lista de formas de pago de quien tiene la llave, para "Elegir de la lista".
+-- Solo devuelve nombres de métodos. Con una llave no válida devuelve las cuatro: el error claro lo da registrar_por_atajo.
+create or replace function public.metodos_atajo(llave text, tipo text default 'gasto')
+returns jsonb language plpgsql stable security definer set search_path = '' as $$
+declare o uuid; b jsonb; usa text[] := array['v','e','c','d'];
+begin
+  if llave ~ '^mf_[A-Za-z0-9]{30,60}$' then
+    select owner_id into o from public.atajo_llaves where hash = encode(extensions.digest(llave, 'sha256'), 'hex');
+    if o is not null then
+      select value into b from public.app_state where user_id = o and key = 'budget';
+      if b is not null then usa := private.metodos_activos(b); end if;
+    end if;
+  end if;
+  if lower(coalesce(tipo, '')) = 'ingreso' then
+    usa := array(select x from unnest(usa) x where x in ('e','d'));
+    if cardinality(usa) = 0 then usa := array['e','d']; end if;
+  end if;
+  return jsonb_build_object('metodos', to_jsonb(string_to_array(private.nombres_metodos(usa, '|'), '|')));
+end $$;
+
 -- La usa el atajo: agrega un gasto (o ingreso) con la fecha de hoy en hora de México.
 -- Nunca devuelve datos de la cuenta; solo un mensaje para la notificación.
 create or replace function public.registrar_por_atajo(llave text, monto numeric, metodo text,
   concepto text default '', tipo text default 'gasto', categoria text default 'Otro')
 returns jsonb language plpgsql volatile security definer set search_path = '' as $$
-declare o uuid; m text; t text; a numeric; c text; n text; f text; mov jsonb; campo text;
+declare o uuid; m text; t text; a numeric; c text; n text; f text; mov jsonb; campo text; b jsonb; usa text[];
 begin
   if llave is null or llave !~ '^mf_[A-Za-z0-9]{30,60}$' then
     return jsonb_build_object('ok', false, 'mensaje', 'Llave no válida. Revisa el atajo.');
@@ -287,6 +321,15 @@ begin
   if m is null or (t = 'ingreso' and m not in ('e', 'd')) then
     return jsonb_build_object('ok', false, 'mensaje', case when t = 'ingreso' then 'Elige Efectivo o Débito.' else 'Elige Vales, Efectivo, Crédito o Débito.' end);
   end if;
+  -- Solo las formas de pago que el usuario activó en la app (Más > Cuenta > Métodos de pago)
+  select value into b from public.app_state where user_id = o and key = 'budget';
+  if b is null then return jsonb_build_object('ok', false, 'mensaje', 'Abre la app una vez antes de usar el atajo.'); end if;
+  usa := private.metodos_activos(b);
+  if not (m = any(usa)) then
+    return jsonb_build_object('ok', false, 'mensaje', 'No tienes ' ||
+      case m when 'v' then 'vales activados' when 'e' then 'efectivo activado' when 'c' then 'crédito activado' else 'débito activado' end ||
+      '. Elige ' || private.nombres_metodos(case when t = 'ingreso' then array(select x from unnest(usa) x where x in ('e','d')) else usa end, ' o ') || '.');
+  end if;
   a := round(coalesce(monto, 0), 2);
   if a <= 0 or a >= 10000000 then return jsonb_build_object('ok', false, 'mensaje', 'Escribe un monto mayor a cero.'); end if;
   n := left(trim(coalesce(concepto, '')), 120);
@@ -299,7 +342,6 @@ begin
   update public.app_state
      set value = jsonb_set(value, array[campo], coalesce(value->campo, '[]'::jsonb) || jsonb_build_array(mov))
    where user_id = o and key = 'budget';
-  if not found then return jsonb_build_object('ok', false, 'mensaje', 'Abre la app una vez antes de usar el atajo.'); end if;
   update public.atajo_llaves set last_used = now() where owner_id = o;
 
   return jsonb_build_object('ok', true, 'mensaje',
@@ -313,5 +355,7 @@ revoke all on function public.estado_llave_atajo() from public, anon;
 grant execute on function public.crear_llave_atajo()  to authenticated;
 grant execute on function public.borrar_llave_atajo() to authenticated;
 grant execute on function public.estado_llave_atajo() to authenticated;
+revoke all on function public.metodos_atajo(text, text) from public;
+grant execute on function public.metodos_atajo(text, text) to anon, authenticated;
 revoke all on function public.registrar_por_atajo(text, numeric, text, text, text, text) from public;
 grant execute on function public.registrar_por_atajo(text, numeric, text, text, text, text) to anon, authenticated;
