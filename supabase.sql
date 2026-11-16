@@ -364,3 +364,32 @@ revoke all on function public.metodos_atajo(text, text) from public;
 grant execute on function public.metodos_atajo(text, text) to anon, authenticated;
 revoke all on function public.registrar_por_atajo(text, numeric, text, text, text, text) from public;
 grant execute on function public.registrar_por_atajo(text, numeric, text, text, text, text) to anon, authenticated;
+
+-- Dirección tolerante para el atajo (/rest/v1/rpc/atajo): recibe el JSON completo tal como lo mande el iPhone.
+-- Ignora mayúsculas, acentos y espacios en los nombres de los campos, acepta el monto como número o texto
+-- ("1,500", "$80") y, si falta algo, dice qué campos llegaron. Luego usa registrar_por_atajo.
+create or replace function public.atajo(jsonb)
+returns jsonb language plpgsql volatile security definer set search_path = '' as $$
+declare j jsonb := coalesce($1, '{}'::jsonb); n jsonb := '{}'::jsonb; k text; v jsonb; recibidos text; mt text; mo numeric;
+begin
+  if jsonb_typeof(j) <> 'object' then
+    return jsonb_build_object('ok', false, 'mensaje', 'El atajo debe mandar el cuerpo como JSON con campos.');
+  end if;
+  for k, v in select e.key, e.value from jsonb_each(j) e loop
+    if jsonb_typeof(v) = 'array' then v := coalesce(v->0, 'null'::jsonb); end if;  -- p. ej. ["Efectivo"]
+    n := n || jsonb_build_object(lower(translate(trim(k), 'ÁÉÍÓÚáéíóú', 'AEIOUaeiou')), v);
+  end loop;
+  recibidos := coalesce((select string_agg('"' || e.key || '"', ', ' order by e.key) from jsonb_each(j) e), 'ninguno');
+  if coalesce(n->>'llave', '') = '' or coalesce(n->>'monto', '') = '' or coalesce(n->>'metodo', '') = '' then
+    return jsonb_build_object('ok', false, 'mensaje',
+      'Faltan datos en el JSON del atajo. Llegaron: ' || recibidos || '. Se necesitan llave, monto y metodo (con valor).');
+  end if;
+  mt := regexp_replace(n->>'monto', '[^0-9.]', '', 'g');
+  if mt !~ '^[0-9]+(\.[0-9]+)?$' then
+    return jsonb_build_object('ok', false, 'mensaje', 'El monto "' || left(n->>'monto', 20) || '" no es un número.');
+  end if;
+  mo := mt::numeric;
+  return public.registrar_por_atajo(n->>'llave', mo, n->>'metodo', coalesce(n->>'concepto', ''), coalesce(n->>'tipo', 'gasto'), coalesce(n->>'categoria', 'Otro'));
+end $$;
+revoke all on function public.atajo(jsonb) from public;
+grant execute on function public.atajo(jsonb) to anon, authenticated;
