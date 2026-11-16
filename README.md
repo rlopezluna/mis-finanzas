@@ -204,7 +204,17 @@ Abre http://localhost:8000. Usa la misma base de datos de Supabase que la versi�
 
 ---
 
-## Novedades (versión 51): adelantos y planes largos
+## Novedades (versión 52): atajo de iPhone
+
+**Ejecuta de nuevo `supabase.sql`** (agrega la tabla y las funciones de la llave del atajo).
+
+- Registra gastos (o ingresos) desde la app **Atajos** del iPhone sin abrir Mis finanzas: el atajo te pregunta el monto, con qué pagaste y en qué, y te muestra "Gasto de $125.00 guardado".
+- Se configura en **Más → Cuenta → Atajo de iPhone**: creas una llave, la copias y sigues los pasos que aparecen ahí. La llave se muestra una sola vez.
+- La llave solo sirve para **agregar** movimientos: no deja ver tus datos. Se guarda cifrada y la puedes borrar o cambiar cuando quieras; la anterior deja de funcionar al instante.
+- Para abrirlo rápido: agrégalo a la pantalla de inicio, o en el iPhone SE de 2.ª o 3.ª generación usa **Ajustes → Accesibilidad → Tocar → Tocar atrás**.
+- Los movimientos del atajo quedan con la fecha de hoy (hora de México) y, los gastos, con la categoría "Otro".
+
+## Versión 51: adelantos y planes largos
 
 - **Adelantos:** si en un pago das más de la mensualidad, lo extra se descuenta de las **últimas** mensualidades. Si pagas el doble en un mes, la última mensualidad desaparece del plan. Funciona en el préstamo y en las compras a meses, y la tarjeta te dice cuánto has adelantado.
 - **Planes largos:** con muchos meses ya no ves una lista gigante. Se muestran los pagos de alrededor del siguiente (y los atrasados) y un botón **Ver los N pagos** para abrir el resto.
