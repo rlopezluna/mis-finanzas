@@ -55,7 +55,7 @@ La configuración se hace **una sola vez** y toma unos 15 minutos.
 
 ## Paso 2. Subir la app a GitHub
 
-> GitHub Pages es gratis solo con repositorios **públicos**. Lo que captures en la app vive en Supabase, protegido con tu contraseña. Pero los valores iniciales escritos en `index.html` (monto del préstamo, depósitos, ahorro) sí se ven en el código público.
+> GitHub Pages es gratis solo con repositorios **públicos**. Lo que captures en la app vive en Supabase, protegido con tu contraseña. No escribas cifras personales en el código: todo lo que esté en los archivos se ve en el repositorio público.
 
 ### Opción A: desde la página de GitHub (sin instalar nada)
 
@@ -119,9 +119,12 @@ Cada vez que subas cambios a GitHub, la página se actualiza sola en 1 o 2 minut
 
 ---
 
-## Paso 4 (opcional). Cerrar el registro
+## Paso 4. Ajustes de seguridad en Supabase
 
-Cuando tu familia ya tenga sus cuentas, evita que extraños se registren: en Supabase ve a **Authentication → Sign In / Providers**, apaga **Allow new users to sign up** y guarda. La app ocultará el botón "Crear cuenta".
+1. **Contraseñas:** en **Authentication → Sign In / Providers → Email** sube **Minimum password length** a `8` (la app ya pide 8, pero Supabase acepta 6 si alguien llama directo a su API). Si tu plan lo incluye, activa **Leaked password protection**.
+2. **No configures un SMTP propio.** La app usa correos inventados (`usuario@mis-finanzas.app`) que no son tuyos. Con el correo por defecto de Supabase no se envía nada a esas direcciones; con un SMTP propio, quien fuera dueño de ese dominio podría recibir enlaces para entrar a las cuentas.
+3. **Cierra el registro** cuando tu familia ya tenga sus cuentas: en **Authentication → Sign In / Providers**, apaga **Allow new users to sign up** y guarda. La app ocultará el botón "Crear cuenta".
+4. **Si copias esta app a otro proyecto de Supabase**, cambia también la dirección del proyecto en la línea `Content-Security-Policy` de `index.html` (`connect-src`), o la app no podrá conectarse.
 
 ---
 
@@ -201,7 +204,20 @@ Abre http://localhost:8000. Usa la misma base de datos de Supabase que la versi�
 
 ---
 
-## Novedades (versión 45)
+## Novedades (versión 48): revisión de seguridad y diseño
+
+**Ejecuta de nuevo `supabase.sql`** para que se apliquen los cambios de la base de datos.
+
+- Seguridad: al compartir una cuenta (vales, efectivo o débito) el enlace ya no incluye los saldos de las otras cuentas. La hora de cada guardado la pone el servidor, así un celular con el reloj mal ya no puede borrar cambios más nuevos. La app solo se conecta a tu proyecto de Supabase. Las cuentas ya no arrancan con cifras personales escritas en el código (quedan solo en la revisión que repara cuentas de la versión 44 y en el historial de Git).
+- Un pago con abono parcial cuya fecha ya pasó ahora cuenta como **atrasado** (antes decía "Parcial" y el Coach no avisaba).
+- Al editar un campo y pasar al siguiente con Tab ya no se pierde el foco, y el clic en un botón justo después de escribir ya no se pierde.
+- Coach: con alertas pendientes el puntaje ya no puede decir "Vas muy bien".
+- Estadísticas: colores que siguen el modo claro/oscuro y son distinguibles con daltonismo; cada forma de pago y categoría tiene siempre su color. "Por mes" y "Por quincena" ahora son barras.
+- Tablas de pagos más cortas: la nota de cada pago se abre con "+ Nota".
+- Aviso al marcar un pago (en el celular la tarjeta puede quedar fuera de la pantalla), cambio de pestaña sin desplazamiento animado, y el diálogo de compartir se cierra con animación.
+- Eliminar la cuenta avisa que también borra las cuentas de tus invitados.
+
+## Versión 45
 
 - Las cuentas nuevas empiezan vacías (sin préstamo y con montos en $0). La cuenta *rafa* conserva sus valores iniciales.
 
