@@ -475,6 +475,7 @@ document.addEventListener('click',e=>{
  if(a==='hkind'){HD.kind=t.dataset.v;render();const q=$('#ha');if(q)q.focus();return}
  if(a==='hm'){if(curKind()==='g'){lastM=t.dataset.v;try{localStorage.setItem('lastm',lastM)}catch(x){}}else lastMi=t.dataset.v;render();return}
  if(a==='hsave'){homeSave();return}
+ if(a==='atact'){if(AT.st&&!confirm('Se creará una llave nueva y la anterior dejará de funcionar. ¿Continuar?'))return;activateAtajo();return}
  if(a==='atcreate'){if(AT.st&&!confirm('Se creará una llave nueva y la anterior dejará de funcionar. Tendrás que cambiarla en tu atajo. ¿Continuar?'))return;createAtajo();return}
  if(a==='atdel'){if(confirm('¿Borrar la llave? El atajo dejará de funcionar.'))delAtajo();return}
  if(a==='cpy'){const i=$(t.dataset.t);if(i){i.select();const ok=()=>{const o=t.textContent;t.textContent='¡Copiado!';setTimeout(()=>{t.textContent=o},1500)};if(navigator.clipboard)navigator.clipboard.writeText(i.value).then(ok,()=>{try{document.execCommand('copy');ok()}catch(x){}});else{try{document.execCommand('copy');ok()}catch(x){}}}return}
@@ -619,7 +620,13 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.target.id==='ha'|
 // La llave solo permite AGREGAR gastos o ingresos (función registrar_por_atajo de supabase.sql). Se muestra una sola vez.
 let AT={st:undefined,key:'',err:''};
 async function loadAtajo(){if(AT.loading)return;AT.loading=true;try{AT.st=(await api('/rest/v1/rpc/estado_llave_atajo',{method:'POST',body:{}}))||null;AT.err=''}catch(e){AT.st=null;AT.err=e.status===404?'sql':'red'}finally{AT.loading=false}if(tab==='acct')render()}
-async function createAtajo(){try{AT.key=await api('/rest/v1/rpc/crear_llave_atajo',{method:'POST',body:{}});AT.err='';AT.st=undefined;await loadAtajo()}catch(e){AT.err=e.status===404?'sql':'red';render()}}
+async function createAtajo(){try{AT.key=await api('/rest/v1/rpc/crear_llave_atajo',{method:'POST',body:{}});AT.err='';AT.st=undefined;await loadAtajo();return AT.key}catch(e){AT.err=e.status===404?'sql':'red';render();throw e}}
+const ATURL=/^https:\/\/www\.icloud\.com\/shortcuts\/[A-Za-z0-9]{20,64}\/?$/.test(String(CFG.atajoUrl||'').trim())?String(CFG.atajoUrl).trim():'';
+// Copia un texto que todavía no existe (la llave viene de la red) sin perder el permiso del toque: Safari lo exige
+function copyLater(p){try{if(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write)
+ return navigator.clipboard.write([new ClipboardItem({'text/plain':p.then(t=>new Blob([t],{type:'text/plain'}))})]).then(()=>true,()=>p.then(t=>navigator.clipboard.writeText(t)).then(()=>true,()=>false))}catch(e){}
+ return p.then(t=>navigator.clipboard?navigator.clipboard.writeText(t).then(()=>true,()=>false):false,()=>false)}
+async function activateAtajo(){const kp=createAtajo();AT.copied=await copyLater(kp);kp.catch(()=>{});render()}
 async function delAtajo(){try{await api('/rest/v1/rpc/borrar_llave_atajo',{method:'POST',body:{}});AT.key='';AT.st=null;render();toast('Llave borrada')}catch(e){AT.err='red';render()}}
 const cpyRow=(id,val,lbl)=>`<div class="shlink"><input id="${id}" readonly value="${esc(val)}" aria-label="${esc(lbl)}"><button type="button" class="btn" data-act="cpy" data-t="#${id}">Copiar</button></div>`;
 const fdt=s=>s?new Date(s).toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'}):'';
@@ -627,10 +634,14 @@ function atajoCard(){if(!API)return '';if(AT.st===undefined)loadAtajo();
  let h=`<div class="card"><h3>Atajo de iPhone</h3><p class="note">Registra un gasto sin abrir la app: tocas el atajo, escribes el monto y eliges con qué pagaste. La llave del atajo solo sirve para <b>agregar</b> gastos o ingresos; no deja ver tus datos.</p>`;
  if(AT.err==='sql')h+=`<p class="note badm">Falta actualizar la base de datos: ejecuta de nuevo supabase.sql en Supabase (ver README).</p>`;
  else if(AT.err==='red')h+=`<p class="note badm">No se pudo conectar. Revisa tu internet e inténtalo de nuevo.</p>`;
- if(AT.key)h+=`<p class="note okm" style="margin-top:12px"><b>Tu llave nueva.</b> Cópiala ahora y pégala en el atajo: por seguridad no se vuelve a mostrar.</p>${cpyRow('atk',AT.key,'Llave del atajo')}`;
+ if(AT.key&&ATURL)h+=`<div class="atgo"><p class="note okm"><b>${AT.copied?'Listo: tu llave ya está copiada.':'Tu llave está lista.'}</b></p><ol>${AT.copied?'':'<li>Copia tu llave con el botón de abajo.</li>'}<li>Toca <b>Abrir el atajo</b>.</li><li>Cuando te pida la llave, mantén presionado y elige <b>Pegar</b>.</li><li>Toca <b>Agregar atajo</b>. ¡Listo!</li></ol>
+  <a class="btn f go" href="${esc(ATURL)}" target="_blank" rel="noopener">Abrir el atajo</a>
+  <p class="note" style="margin-top:12px">${AT.copied?'Si no se pegó, cópiala aquí. ':''}Por seguridad la llave no se vuelve a mostrar.</p>${cpyRow('atk',AT.key,'Llave del atajo')}</div>`;
+ else if(AT.key)h+=`<p class="note okm" style="margin-top:12px"><b>Tu llave nueva.</b> Cópiala ahora y pégala en el atajo: por seguridad no se vuelve a mostrar.</p>${cpyRow('atk',AT.key,'Llave del atajo')}`;
  else if(AT.st)h+=`<p class="note" style="margin-top:12px">Tienes una llave que termina en <b>…${esc(AT.st.pista)}</b>, creada el ${fdt(AT.st.creada)}. Último uso: ${AT.st.usada?fdt(AT.st.usada):'todavía no se usa'}.</p>`;
- h+=`<div class="row" style="margin-top:10px">${AT.st===undefined&&!AT.err?'<span class="note">Cargando…</span>':`<button type="button" class="btn f" data-act="atcreate">${AT.st||AT.key?'Crear una llave nueva':'Crear llave del atajo'}</button>${AT.st||AT.key?'<button type="button" class="btn del" data-act="atdel">Borrar llave</button>':''}`}</div>`;
- if(AT.st||AT.key)h+=`<details class="steps"><summary>Cómo armar el atajo en tu iPhone</summary><ol>
+ h+=`<div class="row" style="margin-top:10px">${AT.st===undefined&&!AT.err?'<span class="note">Cargando…</span>':`${ATURL&&!AT.key?`<button type="button" class="btn f" data-act="atact">${AT.st?'Volver a activar en este iPhone':'Activar atajo en este iPhone'}</button>`:''}${ATURL?'':`<button type="button" class="btn f" data-act="atcreate">${AT.st||AT.key?'Crear una llave nueva':'Crear llave del atajo'}</button>`}${AT.st||AT.key?'<button type="button" class="btn del" data-act="atdel">Borrar llave</button>':''}`}</div>`;
+ if(ATURL)h+=`<p class="note" style="margin-top:12px">Para abrirlo con dos toques en la parte de atrás del iPhone (SE de 2.ª o 3.ª generación): <b>Ajustes → Accesibilidad → Tocar → Tocar atrás → Doble toque → Gasto</b>.</p>`;
+ if(AT.st||AT.key)h+=`<details class="steps"><summary>${ATURL?'Prefiero armarlo a mano':'Cómo armar el atajo en tu iPhone'}</summary><ol>
   <li>Abre la app <b>Atajos</b> y toca <b>+</b>.</li>
   <li>Agrega <b>Pedir entrada</b>: tipo <b>Número</b>, pregunta "¿Cuánto gastaste?".</li>
   <li>Agrega <b>Lista</b> con: Vales, Efectivo, Crédito y Débito. Después agrega <b>Elegir de la lista</b> con la pregunta "¿Con qué pagaste?".</li>
