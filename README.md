@@ -204,7 +204,13 @@ Abre http://localhost:8000. Usa la misma base de datos de Supabase que la versi�
 
 ---
 
-## Novedades (versión 52): atajo de iPhone
+## Novedades (versión 53): aviso de versión nueva
+
+- La app revisa sola si hay una versión nueva (al abrirla, al volver a ella y cada 30 minutos) y muestra **Hay una versión nueva → Actualizar**. Así el iPhone ya no se queda con una copia vieja.
+- En **Más → Cuenta** aparece el número de versión que tienes.
+- **Para publicar una versión nueva:** sube el número en `app.js` (`APPV`), en `version.json` y en los `?v=` de `index.html`.
+
+## Versión 52: atajo de iPhone
 
 **Ejecuta de nuevo `supabase.sql`** (agrega la tabla y las funciones de la llave del atajo).
 
