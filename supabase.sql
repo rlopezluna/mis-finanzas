@@ -282,10 +282,10 @@ revoke all on function private.nombres_metodos(text[], text) from public, anon, 
 -- Solo devuelve nombres de métodos. Con una llave no válida devuelve las cuatro: el error claro lo da registrar_por_atajo.
 create or replace function public.metodos_atajo(llave text, tipo text default 'gasto')
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
-declare o uuid; b jsonb; usa text[] := array['v','e','c','d'];
+declare o uuid; b jsonb; usa text[] := array['v','e','c','d']; ll text := substring(coalesce(llave, '') from 'mf_[A-Za-z0-9]{30,60}');
 begin
-  if llave ~ '^mf_[A-Za-z0-9]{30,60}$' then
-    select owner_id into o from public.atajo_llaves where hash = encode(extensions.digest(llave, 'sha256'), 'hex');
+  if ll is not null then
+    select owner_id into o from public.atajo_llaves where hash = encode(extensions.digest(ll, 'sha256'), 'hex');
     if o is not null then
       select value into b from public.app_state where user_id = o and key = 'budget';
       if b is not null then usa := private.metodos_activos(b); end if;
@@ -370,7 +370,7 @@ grant execute on function public.registrar_por_atajo(text, numeric, text, text, 
 -- ("1,500", "$80") y, si falta algo, dice qué campos llegaron. Luego usa registrar_por_atajo.
 create or replace function public.atajo(jsonb)
 returns jsonb language plpgsql volatile security definer set search_path = '' as $$
-declare j jsonb := coalesce($1, '{}'::jsonb); n jsonb := '{}'::jsonb; k text; v jsonb; recibidos text; mt text; mo numeric;
+declare j jsonb := coalesce($1, '{}'::jsonb); n jsonb := '{}'::jsonb; k text; v jsonb; recibidos text; mt text; mo numeric; ll text; raw text;
 begin
   if jsonb_typeof(j) <> 'object' then
     return jsonb_build_object('ok', false, 'mensaje', 'El atajo debe mandar el cuerpo como JSON con campos.');
@@ -384,12 +384,20 @@ begin
     return jsonb_build_object('ok', false, 'mensaje',
       'Faltan datos en el JSON del atajo. Llegaron: ' || recibidos || '. Se necesitan llave, monto y metodo (con valor).');
   end if;
+  -- La llave puede venir con espacios, saltos de línea o comillas alrededor: se toma solo el "mf_..."
+  raw := n->>'llave';
+  ll := substring(raw from 'mf_[A-Za-z0-9]{30,60}');
+  if ll is null then
+    return jsonb_build_object('ok', false, 'mensaje',
+      'La llave no tiene el formato correcto. Llegaron ' || length(raw) || ' caracteres que empiezan con "' || left(regexp_replace(raw, '\s', '·', 'g'), 6) ||
+      '". Debe empezar con mf_ (cópiala de nuevo en la app).');
+  end if;
   mt := regexp_replace(n->>'monto', '[^0-9.]', '', 'g');
   if mt !~ '^[0-9]+(\.[0-9]+)?$' then
     return jsonb_build_object('ok', false, 'mensaje', 'El monto "' || left(n->>'monto', 20) || '" no es un número.');
   end if;
   mo := mt::numeric;
-  return public.registrar_por_atajo(n->>'llave', mo, n->>'metodo', coalesce(n->>'concepto', ''), coalesce(n->>'tipo', 'gasto'), coalesce(n->>'categoria', 'Otro'));
+  return public.registrar_por_atajo(ll, mo, n->>'metodo', coalesce(n->>'concepto', ''), coalesce(n->>'tipo', 'gasto'), coalesce(n->>'categoria', 'Otro'));
 end $$;
 revoke all on function public.atajo(jsonb) from public;
 grant execute on function public.atajo(jsonb) to anon, authenticated;
