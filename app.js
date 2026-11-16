@@ -1,7 +1,7 @@
 // Mis finanzas — lógica de la app
 // Valores iniciales: todas las cuentas nuevas empiezan vacías (las cifras personales viven solo en la nube)
 // Versión de la app. Al publicar cambios, súbela aquí, en version.json y en los ?v= de index.html
-const APPV=55;
+const APPV=56;
 const DEF={total:0,monthly:0,day:30,start:'2026-11-30',pay:[]};
 const BDEF={cIni:0,cDate:'2026-11-02',dIni:0,dDate:'2026-11-02',vIni:0,vDate:'2026-11-02',vAmt:0,gs:'2026-10-30',dayA:15,amtA:0,dayB:30,amtB:0,sm:0,exp:[],sav:[],goal:0,debts:[],stm:[]};
 const isRafa=()=>!!ses&&ses.user==='rafa';
@@ -654,7 +654,7 @@ function atajoCard(){if(!API)return '';if(AT.st===undefined)loadAtajo();
   <li>Agrega <b>Pedir entrada</b>: tipo <b>Número</b>, pregunta "¿Cuánto gastaste?".</li>
   <li>Agrega <b>Elegir de la lista</b> con el <i>Valor del diccionario</i> del paso 4 y la pregunta "¿Con qué pagaste?".</li>
   <li>Agrega <b>Pedir entrada</b>: tipo <b>Texto</b>, pregunta "¿En qué? (opcional)".</li>
-  <li>Mantén presionado el paso 3 → <b>Duplicar</b> y arrastra la copia hasta aquí: así conserva el POST y la clave pública. Cambia su dirección por esta:${cpyRow('aturl',SB.url+'/rest/v1/rpc/registrar_por_atajo','Dirección para registrar')}
+  <li>Mantén presionado el paso 3 → <b>Duplicar</b> y arrastra la copia hasta aquí: así conserva el POST y la clave pública. Cambia su dirección por esta:${cpyRow('aturl',SB.url+'/rest/v1/rpc/atajo','Dirección para registrar')}
    Revisa que el encabezado <code>apikey</code> siga siendo la clave pública (<code>sb_publishable_…</code>). Tu llave va <b>solo</b> dentro del JSON. En el cuerpo <b>JSON</b> deja <code>llave</code> y agrega 3 campos más; en total: <code>llave</code> (Texto) con la variable <i>Texto</i> del paso 2; <code>monto</code> (Número) con la <i>Entrada proporcionada</i> del paso 5; <code>metodo</code> (Texto) con el <i>Elemento elegido</i>; <code>concepto</code> (Texto) con la <i>Entrada proporcionada</i> del paso 7.</li>
   <li>Agrega <b>Obtener valor del diccionario</b> con la clave <code>mensaje</code>.</li>
   <li>Agrega <b>Mostrar notificación</b> con ese <i>Valor del diccionario</i>.</li>
