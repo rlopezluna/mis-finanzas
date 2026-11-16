@@ -204,7 +204,11 @@ Abre http://localhost:8000. Usa la misma base de datos de Supabase que la versi�
 
 ---
 
-## Novedades (versión 54): el atajo respeta tus formas de pago
+## Novedades (supabase.sql, 16 nov): mensajes claros del atajo
+
+- Si al atajo le falta un campo en el JSON (`llave`, `monto` o `metodo`), la notificación dice cuál falta en vez de no hacer nada. **Ejecuta de nuevo `supabase.sql`.**
+
+## Versión 54: el atajo respeta tus formas de pago
 
 **Ejecuta de nuevo `supabase.sql`.**
 
