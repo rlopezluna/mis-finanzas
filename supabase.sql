@@ -300,12 +300,17 @@ end $$;
 
 -- La usa el atajo: agrega un gasto (o ingreso) con la fecha de hoy en hora de México.
 -- Nunca devuelve datos de la cuenta; solo un mensaje para la notificación.
-create or replace function public.registrar_por_atajo(llave text, monto numeric, metodo text,
+-- Todos los campos tienen valor por omisión: si al atajo le falta uno, se responde con un mensaje claro
+-- en lugar de un 404 de la API ("no encuentro la función").
+create or replace function public.registrar_por_atajo(llave text default null, monto numeric default null, metodo text default null,
   concepto text default '', tipo text default 'gasto', categoria text default 'Otro')
 returns jsonb language plpgsql volatile security definer set search_path = '' as $$
 declare o uuid; m text; t text; a numeric; c text; n text; f text; mov jsonb; campo text; b jsonb; usa text[];
 begin
-  if llave is null or llave !~ '^mf_[A-Za-z0-9]{30,60}$' then
+  if llave is null then return jsonb_build_object('ok', false, 'mensaje', 'Al atajo le falta el campo "llave" en el JSON.'); end if;
+  if monto is null then return jsonb_build_object('ok', false, 'mensaje', 'Al atajo le falta el campo "monto" (Número) en el JSON.'); end if;
+  if metodo is null then return jsonb_build_object('ok', false, 'mensaje', 'Al atajo le falta el campo "metodo" (Texto, con el Elemento elegido) en el JSON.'); end if;
+  if llave !~ '^mf_[A-Za-z0-9]{30,60}$' then
     return jsonb_build_object('ok', false, 'mensaje', 'Llave no válida. Revisa el atajo.');
   end if;
   select owner_id into o from public.atajo_llaves where hash = encode(extensions.digest(llave, 'sha256'), 'hex');
