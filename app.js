@@ -167,11 +167,11 @@ function accInfo(k){if(k==='v')return valesInfo();const t=today(),dt=B[k==='e'?'
  const inc=(B.inc||[]).filter(x=>x.m===k&&(x.d||t)>=dt).reduce((s,x)=>s+(+x.a||0),0);
  return{bal:r2(ini+inc-spent),inc:r2(inc)}}
 function expBlock(k){const list=B.exp.map((x,i)=>({e:x,i})).filter(o=>o.e.m===k).sort((a,b)=>(b.e.d||'').localeCompare(a.e.d||'')).slice(0,5);
- return `<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px"><b style="font-size:15px">Gastos con ${METH[k].toLowerCase()}</b>
+ return `<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px"><b style="font-size:0.9375rem">Gastos con ${METH[k].toLowerCase()}</b>
   <div style="margin-top:10px">${list.length?list.map(o=>editE===o.i?editRow(o):`<div class="ex"><span>${fmtD(o.e.d)} ${esc(o.e.n)} <small class="tg">${esc(o.e.c||'Otro')}</small></span><span>${M(o.e.a)} <button class="btn" data-act="eedit" data-i="${o.i}">Editar</button> <button class="btn" data-act="del" data-i="${o.i}">Quitar</button></span></div>`).join(''):'<p class="note">Aún no hay gastos con esta forma de pago.</p>'}</div></div>`}
 function incBlock(k){const list=(B.inc||[]).map((x,i)=>({x,i})).filter(o=>o.x.m===k).sort((a,b)=>(b.x.d||'').localeCompare(a.x.d||'')).slice(0,5);
  if(!list.length)return '';
- return `<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px"><b style="font-size:15px">Ingresos</b>
+ return `<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px"><b style="font-size:0.9375rem">Ingresos</b>
   <div style="margin-top:6px">${list.map(o=>editI===o.i?incEditRow(o):`<div class="ex"><span>${fmtD(o.x.d)} ${esc(o.x.n||'Ingreso')}</span><span style="color:var(--ok)">+${M(o.x.a)} <button class="btn" data-act="iedit" data-i="${o.i}">Editar</button> <button class="btn" data-act="idel" data-i="${o.i}">Quitar</button></span></div>`).join('')}</div></div>`}
 function saldoCard(k){
  const C={v:{t:'Tarjeta de vales',ini:'vIni',dt:'vDate'},e:{t:'Efectivo',ini:'cIni',dt:'cDate'},d:{t:'Débito',ini:'dIni',dt:'dDate'}}[k];
@@ -181,7 +181,7 @@ function saldoCard(k){
  const before=B.exp.filter(x=>x.m===k&&(x.d||today())<B[C.dt]).length;
  const note=k==='v'?`Recibes ${M(B.vAmt)} cada día 30. Próximo depósito: ${info.next?fmtD(info.next):'—'}.`:`Se descuenta con los gastos que pagas con ${C.t.toLowerCase()}.`;
  return `<div class="card" style="margin-top:12px"><h3 style="margin:0 0 4px">${C.t}</h3>
-  <p style="margin:0"><b class="big" style="font-size:28px;color:${col}">${M(info.bal)}</b> <span class="note">disponibles</span></p>
+  <p style="margin:0"><b class="big" style="font-size:1.75rem;color:${col}">${M(info.bal)}</b> <span class="note">disponibles</span></p>
   <p class="note" style="margin:2px 0 8px">${total>0?`Gastado ${M(r2(total-info.bal))} de ${M(total)}. Te queda el ${Math.round(pct)}%.`:'Escribe tu saldo abajo para ver cuánto te queda.'}</p>
   <div class="bar" style="height:14px"><i style="width:${pct}%;background:${col}"></i></div>
   <p class="note" style="margin:6px 0 4px">${note}</p>${shareBtn('acct:'+k,C.t)}
@@ -361,11 +361,11 @@ async function deleteAccount(){const p=$('#dpw').value,m=$('#dmsg');m.className=
 let emSel='c';let editE=null,editI=null,hMore=false;
 let CL=new Set();try{CL=new Set(JSON.parse(localStorage.getItem('cl')||'[]'))}catch(e){}
 const saveCL=()=>{try{localStorage.setItem('cl',JSON.stringify([...CL]))}catch(e){}};let regMode=false;const loginHtml=()=>`<div class="lg"><img class="logo" src="icon.svg" alt="" width="72" height="72"><h2>Mis finanzas</h2><p class="s">${regMode?'Crea tu cuenta para empezar':'Tus cuentas de la casa, en orden.'}</p>
-  <div class="box"><label>Usuario<div class="fld"><input id="lu" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ej. maria_lopez"></div></label>
-  <label>Contraseña<div class="fld pw"><input id="lp" type="password" autocomplete="${regMode?'new-password':'current-password'}" placeholder="${regMode?'Mínimo 8 caracteres':'Tu contraseña'}"><button type="button" class="eye" data-act="eye">Ver</button></div></label>
-  ${regMode?'<label>Repite la contraseña<div class="fld pw"><input id="lp2" type="password" autocomplete="new-password"></div></label>':''}
-  <p id="lerr" class="lerr" role="alert"></p><button class="btn f go" data-act="${regMode?'register':'login'}">${regMode?'Crear cuenta':'Entrar'}</button>
-  <p class="note" style="text-align:center;margin-top:12px">${regMode?'¿Ya tienes cuenta? <button type="button" class="linkb" data-act="regtoggle">Inicia sesión</button>':canReg?'¿No tienes cuenta? <button type="button" class="linkb" data-act="regtoggle">Crear cuenta</button>':'¿No tienes cuenta? Pídesela a quien administra la app.'}</p></div>
+  <form class="box" id="lgform" method="post" action="#" aria-label="${regMode?'Crear cuenta':'Iniciar sesión'}"><label>Usuario<div class="fld"><input id="lu" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ej. maria_lopez" required></div></label>
+  <label>Contraseña<div class="fld pw"><input id="lp" name="password" type="password" autocomplete="${regMode?'new-password':'current-password'}" placeholder="${regMode?'Mínimo 8 caracteres':'Tu contraseña'}" required${regMode?' minlength="8"':''}><button type="button" class="eye" data-act="eye">Ver</button></div></label>
+  ${regMode?'<label>Repite la contraseña<div class="fld pw"><input id="lp2" name="password2" type="password" autocomplete="new-password" required minlength="8"></div></label>':''}
+  <p id="lerr" class="lerr" role="alert"></p><button type="submit" class="btn f go">${regMode?'Crear cuenta':'Entrar'}</button>
+  <p class="note" style="text-align:center;margin-top:12px">${regMode?'¿Ya tienes cuenta? <button type="button" class="linkb" data-act="regtoggle">Inicia sesión</button>':canReg?'¿No tienes cuenta? <button type="button" class="linkb" data-act="regtoggle">Crear cuenta</button>':'¿No tienes cuenta? Pídesela a quien administra la app.'}</p></form>
   <p class="foot">Solo tú puedes ver tus datos.</p></div>`;
 let role='',fails=0,lockT=0,showNew=false;const openF={};
 document.addEventListener('toggle',e=>{const d=e.target;if(d&&d.dataset&&d.dataset.fid)openF[d.dataset.fid]=d.open},true);
@@ -443,7 +443,7 @@ h+=loansHtml();
   ${useM('v')?saldoCard('v'):''}${useM('e')?saldoCard('e'):''}`;
   const qh0=h.length;h+=`<div class="card" style="margin-top:12px"><h3 style="margin:0 0 2px">Gastos de la quincena</h3>
   <p class="note" style="margin:0 0 8px">${pre?'El control de gastos inicia el '+fmtD(B.gs)+'. Mientras tanto el límite es $0.':'Quincena del '+(P.cur.k==='A'?'16 al 29':'30 al 15')+': '+fmtD(P.cur.s)+' al '+fmtD(endS)+'. Sale del depósito del día '+(P.cur.k==='A'?B.dayA+' menos el ahorro':B.dayB+' menos '+dl)+'.'}</p>
-  <b class="big" style="font-size:28px;color:${col}">${M(left)}</b> <span class="note">disponibles de ${M(budC)}${qExtra(P)>0&&!pre?' (incluye '+M(qExtra(P))+' de ingresos en débito)':''}</span>
+  <b class="big" style="font-size:1.75rem;color:${col}">${M(left)}</b> <span class="note">disponibles de ${M(budC)}${qExtra(P)>0&&!pre?' (incluye '+M(qExtra(P))+' de ingresos en débito)':''}</span>
   <div class="bar" style="height:20px"><i style="width:${pg}%;background:${col}"></i></div>
   <p class="note" style="margin:0 0 8px">${left<0?'Te pasaste '+M(-left)+' del presupuesto.':'Llevas gastados '+M(ex)+'.'} ${pre?'El '+fmtD(B.gs)+' inicia con ':'El '+fmtD(P.next.s)+' se actualiza con '}${M(budN)}.</p>`;
   if(!mex.length)h+=`<p class="note">Aún no hay gastos en esta quincena.</p>`;
@@ -452,7 +452,7 @@ h+=loansHtml();
   if(!QM().length)h=h.slice(0,qh0);
   h+=`${useM('c')?stmHtml():''}
   <div class="card" style="margin-top:12px"><h3 style="margin:0 0 4px">Ahorro</h3>
-  <b class="big" style="font-size:28px">${M(svM)}</b> <span class="note">ahorrados este mes de ${M(B.sm)}</span>
+  <b class="big" style="font-size:1.75rem">${M(svM)}</b> <span class="note">ahorrados este mes de ${M(B.sm)}</span>
   <div class="bar" style="height:20px"><i style="width:${pa}%"></i></div>
   <p class="note" style="margin:0 0 8px">Total acumulado: <b>${M(sv)}</b></p>
   <div class="row"><label>Meta total (opcional)<input type="number" step="0.01" data-b="goal" value="${esc(B.goal||'')}"></label></div>`;
@@ -482,7 +482,6 @@ document.addEventListener('click',e=>{
  if(a==='mtog'){toggleMethod(t.dataset.v);return}
  if(a==='hkind'){HD.kind=t.dataset.v;render();const q=$('#ha');if(q)q.focus();return}
  if(a==='hm'){if(curKind()==='g'){lastM=t.dataset.v;try{localStorage.setItem('lastm',lastM)}catch(x){}}else lastMi=t.dataset.v;render();return}
- if(a==='hsave'){homeSave();return}
  if(a==='atact'){if(AT.st&&!confirm('Se creará una llave nueva y la anterior dejará de funcionar. ¿Continuar?'))return;activateAtajo();return}
  if(a==='atcreate'){if(AT.busy)return;if(AT.st&&!confirm('Se creará una llave nueva y la anterior dejará de funcionar. Tendrás que cambiarla en tu atajo. ¿Continuar?'))return;AT.busy=true;createAtajo().catch(()=>{}).finally(()=>{AT.busy=false});return}
  if(a==='atdel'){if(confirm('¿Borrar la llave? El atajo dejará de funcionar.'))delAtajo();return}
@@ -543,8 +542,7 @@ document.addEventListener('click',e=>{
  else if(a==='sadd'){const n=$('#sn').value.trim(),m=parseFloat($('#sa').value);if(m>0){B.sav.push({n,a:m,d:today()});saveB()}}
 });
 document.addEventListener('input',e=>{const t=e.target;if(t.id==='uiacc'||t.id==='uiacc2'){UI=normUI(Object.assign({},UI,{[t.id==='uiacc'?'acc':'acc2']:t.value}));applyUI()}});
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.target.id==='lp'||e.target.id==='lp2')){regMode?doRegister():doLogin()}
- else if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.cc>h3')){e.preventDefault();e.target.click()}});
+document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.cc>h3')){e.preventDefault();e.target.click()}});
 document.addEventListener('click',e=>{
  const hh=e.target.closest('.cc>h3');if(hh){const c=hh.parentElement,k=hh.dataset.ck;c.classList.toggle('collapsed');hh.setAttribute('aria-expanded',String(!c.classList.contains('collapsed')));if(!c.classList.contains('collapsed'))pulse(c,'opening',400);c.classList.contains('collapsed')?CL.add(k):CL.delete(k);saveCL();return}
  const sg=e.target.closest('[data-seg]');if(sg){emSel=sg.dataset.seg;document.querySelectorAll('#emg button').forEach(x=>x.classList.toggle('on',x===sg));return}
@@ -607,11 +605,11 @@ const dayLbl=d=>{const t=today();if(!d||d===t)return 'Hoy';const y=new Date();y.
 function homeHtml(){const k=curKind(),L=k==='g'?GM():IM(),m=curM(),q=quincena(),t=today();
  const seg=IM().length?`<div class="seg hseg" role="group" aria-label="Tipo de movimiento"><button type="button" class="${k==='g'?'on':''}" aria-pressed="${k==='g'}" data-act="hkind" data-v="g">Gasto</button><button type="button" class="${k==='i'?'on':''}" aria-pressed="${k==='i'}" data-act="hkind" data-v="i">Ingreso</button></div>`:'';
  const chips=L.length>1?`<div class="hchips" role="group" aria-label="${k==='g'?'Pagado con':'Recibido en'}">${L.map(x=>`<button type="button" class="chip${x===m?' on':''}" aria-pressed="${x===m}" data-act="hm" data-v="${x}">${METH[x]}</button>`).join('')}</div>`:`<p class="note" style="margin:0 0 10px">${k==='g'?'Pagado con':'Recibido en'} ${METH[m].toLowerCase()}</p>`;
- let h=`<div class="cap${k==='i'?' inc':''}">${seg}
-  <div class="hamt"><span aria-hidden="true">$</span><input id="ha" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0" aria-label="Monto ${k==='g'?'del gasto':'del ingreso'}" value="${esc(HD.amt)}"></div>
+ let h=`<form class="cap${k==='i'?' inc':''}" id="hform" method="post" action="#" aria-label="Registrar ${k==='g'?'gasto':'ingreso'}">${seg}
+  <div class="hamt"><span aria-hidden="true">$</span><input id="ha" name="monto" type="number" inputmode="decimal" step="0.01" min="0.01" required placeholder="0" aria-label="Monto ${k==='g'?'del gasto':'del ingreso'}" value="${esc(HD.amt)}"></div>
   ${chips}
-  <div class="hrow"><input id="hc" maxlength="120" placeholder="${k==='g'?'¿En qué? (opcional)':'¿De quién? (opcional)'}" aria-label="Concepto" value="${esc(HD.con)}"><button type="button" class="btn f" data-act="hsave">Guardar</button></div>
-  <div class="hmeta">${k==='g'?`<label>Categoría <select id="hcat">${CATS.map(c=>`<option${c===lastC?' selected':''}>${c}</option>`).join('')}</select></label>`:''}<label>Fecha <input id="hdate" type="date" value="${esc(HD.d||t)}"></label></div></div>`;
+  <div class="hrow"><input id="hc" name="concepto" maxlength="120" placeholder="${k==='g'?'¿En qué? (opcional)':'¿De quién? (opcional)'}" aria-label="Concepto" value="${esc(HD.con)}"><button type="submit" class="btn f">Guardar</button></div>
+  <div class="hmeta">${k==='g'?`<label>Categoría <select id="hcat" name="categoria">${CATS.map(c=>`<option${c===lastC?' selected':''}>${c}</option>`).join('')}</select></label>`:''}<label>Fecha <input id="hdate" name="fecha" type="date" value="${esc(HD.d||t)}"></label></div></form>`;
  if(QM().length)h+=`<section class="hq"><p class="hk">Puedes gastar esta quincena <small>(crédito y débito)</small></p>
   <p class="hbig" style="color:${q.col}">${M(q.left)}</p><div class="bar"><i style="width:${q.pg}%;background:${q.col}"></i></div>
   <p class="note">${q.pre?'El control de gastos inicia el '+fmtD(B.gs)+'.':(q.left<0?'Te pasaste '+M(-q.left)+'. ':'')+'De '+M(q.budC)+', llevas '+M(q.ex)+(q.extra>0?'. Incluye '+M(q.extra)+' de ingresos en débito.':'.')}</p></section>`;
@@ -631,7 +629,8 @@ function homeSave(){const ia=$('#ha'),v=parseFloat(ia&&ia.value),k=curKind(),m=c
  toast((k==='g'?'Gasto':'Ingreso')+' de '+M(x.a)+' guardado',()=>{if(k==='g')B.exp=B.exp.filter(z=>z!==x);else B.inc=(B.inc||[]).filter(z=>z!==x);saveB();toast('Se quitó el '+(k==='g'?'gasto':'ingreso'))})}
 document.addEventListener('input',e=>{const t=e.target;if(t.id==='ha')HD.amt=t.value;else if(t.id==='hc')HD.con=t.value;else if(t.id==='hdate')HD.d=t.value;
  else if(t.id==='hcat'){lastC=t.value;try{localStorage.setItem('lastc',lastC)}catch(x){}}});
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.target.id==='ha'||e.target.id==='hc')){e.preventDefault();homeSave()}});
+// Formularios reales: Enter, "Ir" del teclado y el llavero de iCloud funcionan solos; aquí solo se evita recargar la página
+document.addEventListener('submit',e=>{const f=e.target;if(f.id==='lgform'){e.preventDefault();regMode?doRegister():doLogin()}else if(f.id==='hform'){e.preventDefault();homeSave()}});
 
 // ===================== Atajo de iPhone =====================
 // La llave solo permite AGREGAR gastos o ingresos (función registrar_por_atajo de supabase.sql). Se muestra una sola vez.
@@ -825,7 +824,10 @@ function shareItems(key){return Object.keys(SH).filter(k=>key==='loan'?k==='loan
 let notifyT={};
 function notifyShares(key){if(!ses)return;clearTimeout(notifyT[key]);notifyT[key]=setTimeout(()=>{const msgs=shareItems(key).map(k=>({topic:'share-'+SH[k].token,event:'cambio',payload:{at:Date.now()}}));if(!msgs.length)return;
  fetch(SB.url+'/realtime/v1/api/broadcast',{method:'POST',headers:{apikey:SB.key,Authorization:'Bearer '+ses.a,'Content-Type':'application/json'},body:JSON.stringify({messages:msgs})}).catch(()=>{})},300)}
-function shareDialog(){let d=$('#shdlg');if(!d){d=document.createElement('dialog');d.id='shdlg';d.setAttribute('aria-labelledby','shtitle');document.body.appendChild(d);d.addEventListener('click',e=>{if(e.target===d)closeShare()});d.addEventListener('cancel',e=>{e.preventDefault();closeShare()})}return d}
+function shareDialog(){let d=$('#shdlg');if(!d){d=document.createElement('dialog');d.id='shdlg';d.setAttribute('aria-labelledby','shtitle');
+ // Cerrar tocando afuera o con Esc: closedby="any" (estándar). Safari aún no lo soporta: ahí se detecta el toque fuera del contenido
+ d.setAttribute('closedby','any');document.body.appendChild(d);
+ if(!('closedBy' in HTMLDialogElement.prototype))d.addEventListener('click',e=>{if(e.target===d)closeShare()});/* el contenido (.shbox) llena el diálogo: tocar el propio <dialog> es tocar el fondo */d.addEventListener('cancel',e=>{e.preventDefault();closeShare()})}return d}
 // Cierra el diálogo con una salida breve (más rápida que la entrada)
 function closeShare(){const d=shareDialog();if(!d.open)return;if(RM.matches){d.close();return}
  d.classList.add('closing');setTimeout(()=>{d.classList.remove('closing');d.close()},140)}
