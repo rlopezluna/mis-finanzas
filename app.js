@@ -1,7 +1,7 @@
 // Mis finanzas — lógica de la app
 // Valores iniciales: todas las cuentas nuevas empiezan vacías (las cifras personales viven solo en la nube)
 // Versión de la app. Al publicar cambios, súbela aquí, en version.json y en los ?v= de index.html
-const APPV=58;
+const APPV=59;
 const DEF={total:0,monthly:0,day:30,start:'2026-11-30',pay:[]};
 const BDEF={cIni:0,cDate:'2026-11-02',dIni:0,dDate:'2026-11-02',vIni:0,vDate:'2026-11-02',vAmt:0,gs:'2026-10-30',dayA:15,amtA:0,dayB:30,amtB:0,sm:0,exp:[],sav:[],goal:0,debts:[],stm:[]};
 const isRafa=()=>!!ses&&ses.user==='rafa';
