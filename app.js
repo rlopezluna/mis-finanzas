@@ -1,7 +1,7 @@
 // Mis finanzas — lógica de la app
 // Valores iniciales: todas las cuentas nuevas empiezan vacías (las cifras personales viven solo en la nube)
 // Versión de la app. Al publicar cambios, súbela aquí, en version.json y en los ?v= de index.html
-const APPV=56;
+const APPV=57;
 const DEF={total:0,monthly:0,day:30,start:'2026-11-30',pay:[]};
 const BDEF={cIni:0,cDate:'2026-11-02',dIni:0,dDate:'2026-11-02',vIni:0,vDate:'2026-11-02',vAmt:0,gs:'2026-10-30',dayA:15,amtA:0,dayB:30,amtB:0,sm:0,exp:[],sav:[],goal:0,debts:[],stm:[]};
 const isRafa=()=>!!ses&&ses.user==='rafa';
@@ -624,7 +624,8 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.target.id==='ha'|
 let AT={st:undefined,key:'',err:''};
 async function loadAtajo(){if(AT.loading)return;AT.loading=true;try{AT.st=(await api('/rest/v1/rpc/estado_llave_atajo',{method:'POST',body:{}}))||null;AT.err=''}catch(e){AT.st=null;AT.err=e.status===404?'sql':'red'}finally{AT.loading=false}if(tab==='acct')render()}
 async function createAtajo(){try{AT.key=await api('/rest/v1/rpc/crear_llave_atajo',{method:'POST',body:{}});AT.err='';AT.st=undefined;await loadAtajo();return AT.key}catch(e){AT.err=e.status===404?'sql':'red';render();throw e}}
-const ATURL=/^https:\/\/www\.icloud\.com\/shortcuts\/[A-Za-z0-9]{20,64}\/?$/.test(String(CFG.atajoUrl||'').trim())?String(CFG.atajoUrl).trim():'';
+// Enlace de iCloud del atajo, o el archivo firmado publicado con la app (atajo/Gasto.shortcut)
+const ATURL=(u=>/^https:\/\/www\.icloud\.com\/shortcuts\/[A-Za-z0-9]{20,64}\/?$/.test(u)||/^[A-Za-z0-9_\-\/]+\.shortcut$/.test(u)?u:'')(String(CFG.atajoUrl||'').trim());
 // Copia un texto que todavía no existe (la llave viene de la red) sin perder el permiso del toque: Safari lo exige
 function copyLater(p){try{if(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write)
  return navigator.clipboard.write([new ClipboardItem({'text/plain':p.then(t=>new Blob([t],{type:'text/plain'}))})]).then(()=>true,()=>p.then(t=>navigator.clipboard.writeText(t)).then(()=>true,()=>false))}catch(e){}
