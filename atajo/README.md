@@ -5,7 +5,7 @@
 - `Gasto.xml`: el mismo atajo sin firmar (plist XML), validado con el validador de [Shortcuts Playground](https://github.com/viticci/shortcuts-playground-plugin).
 - `generar_atajo.py`: genera `Gasto.xml` (`python3 generar_atajo.py Gasto.xml`).
 
-No contiene ninguna llave ni preguntas de importación (en iOS 27 el botón "Agregar atajo" se atoraba con ellas). La primera vez que se corre pide la llave, propone el portapapeles y la guarda en iCloud Drive/Atajos/mis-finanzas-llave.txt; las siguientes veces la lee de ahí. Para cambiarla, borra ese archivo. Solo incluye la dirección del proyecto de Supabase y la clave pública (`sb_publishable_…`), que ya son públicas en `config.js`.
+No contiene ninguna llave ni preguntas de importación (en iOS 27 el botón "Agregar atajo" se atoraba con ellas). La primera vez que se corre pide la llave, propone el portapapeles y la guarda en iCloud Drive/Atajos/mis-finanzas-llave.txt; las siguientes veces la lee de ahí. Si el servidor responde que la llave no sirve, el atajo borra ese archivo solo y la próxima vez la vuelve a pedir. También puedes borrarlo a mano para cambiarla. Solo incluye la dirección del proyecto de Supabase y la clave pública (`sb_publishable_…`), que ya son públicas en `config.js`.
 
 ## Volver a firmarlo (sin Mac)
 

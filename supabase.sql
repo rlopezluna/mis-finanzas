@@ -311,10 +311,10 @@ begin
   if monto is null then return jsonb_build_object('ok', false, 'mensaje', 'Al atajo le falta el campo "monto" (Número) en el JSON.'); end if;
   if metodo is null then return jsonb_build_object('ok', false, 'mensaje', 'Al atajo le falta el campo "metodo" (Texto, con el Elemento elegido) en el JSON.'); end if;
   if llave !~ '^mf_[A-Za-z0-9]{30,60}$' then
-    return jsonb_build_object('ok', false, 'mensaje', 'Llave no válida. Revisa el atajo.');
+    return jsonb_build_object('ok', false, 'mensaje', 'Llave no válida. Copia tu llave en la app y corre Gasto otra vez para pegarla.');
   end if;
   select owner_id into o from public.atajo_llaves where hash = encode(extensions.digest(llave, 'sha256'), 'hex');
-  if o is null then return jsonb_build_object('ok', false, 'mensaje', 'Esta llave ya no funciona. Crea una nueva en la app.'); end if;
+  if o is null then return jsonb_build_object('ok', false, 'mensaje', 'Esta llave ya no funciona. Copia tu llave en la app (Más > Cuenta > Atajo de iPhone) y corre Gasto otra vez para pegarla.'); end if;
 
   t := case lower(coalesce(tipo, 'gasto')) when 'ingreso' then 'ingreso' else 'gasto' end;
   m := case lower(translate(trim(coalesce(metodo, '')), 'ÉéÍíÁá', 'eeiiaa'))
@@ -390,7 +390,7 @@ begin
   if ll is null then
     return jsonb_build_object('ok', false, 'mensaje',
       'La llave no tiene el formato correcto. Llegaron ' || length(raw) || ' caracteres que empiezan con "' || left(regexp_replace(raw, '\s', '·', 'g'), 6) ||
-      '". Debe empezar con mf_ (cópiala de nuevo en la app).');
+      '". Debe empezar con mf_. Copia tu llave en la app y corre Gasto otra vez para pegarla.');
   end if;
   mt := regexp_replace(n->>'monto', '[^0-9.]', '', 'g');
   if mt !~ '^[0-9]+(\.[0-9]+)?$' then

@@ -5,7 +5,8 @@ Uso: python3 generar_atajo.py Gasto.xml
 Versión sin preguntas de importación (en iOS 27 el botón "Agregar atajo" se quedaba
 atorado con ellas). La primera vez que se corre pide la llave (propone lo que esté
 en el portapapeles) y la guarda en iCloud Drive/Atajos/mis-finanzas-llave.txt; las
-siguientes veces la lee de ahí. Valida con el validador de Shortcuts Playground.
+siguientes veces la lee de ahí. Si el servidor responde que la llave no sirve, borra el
+archivo para que la próxima vez la vuelva a pedir. Valida con el validador de Shortcuts Playground.
 """
 import plistlib, uuid, sys
 U = lambda: str(uuid.uuid4()).upper()
@@ -30,8 +31,9 @@ def post(uid, name, rpc, items):
     return act('is.workflow.actions.downloadurl', {'UUID': uid, 'CustomOutputName': name, 'WFURL': BASE + rpc, 'WFHTTPMethod': 'POST',
         'ShowHeaders': True, 'WFHTTPHeaders': dictval([field('apikey', tstr(APIKEY))]), 'WFHTTPBodyType': 'JSON', 'WFJSONValues': dictval(items)})
 
-uF, uG, uCB, uK, uR, uM, uMV, uA, uL, uC, uP, uMS, uN = (U() for _ in range(13))
+uF, uG, uCB, uK, uR, uM, uMV, uA, uL, uC, uP, uMS, uN, uF2, uTX = (U() for _ in range(15))
 grp = U()
+grp2 = U()
 LLAVE = ref_var('Llave')
 actions = [
     com('Gasto: registra un gasto en Mis finanzas sin abrir la app. Pregunta el monto, la forma de pago (solo las que tienes activas) y en qué; lo guarda en tu cuenta y muestra una notificación.'),
@@ -60,7 +62,14 @@ actions = [
     post(uP, 'Respuesta', 'atajo', [field('llave', tok(LLAVE)), field('monto', tok(ref_out(uA, 'Monto'))),
                                      field('metodo', tok(ref_out(uL, 'Forma de pago'))), field('concepto', tok(ref_out(uC, 'Concepto')))]),
     act('is.workflow.actions.getvalueforkey', {'UUID': uMS, 'CustomOutputName': 'Mensaje', 'WFGetDictionaryValueType': 'Value', 'WFDictionaryKey': 'mensaje', 'WFInput': att(ref_out(uP, 'Respuesta'))}),
-    act('is.workflow.actions.notification', {'UUID': uN, 'WFNotificationActionTitle': 'Mis finanzas', 'WFNotificationActionBody': tok(ref_out(uMS, 'Mensaje'))}),
+    act('is.workflow.actions.gettext', {'UUID': uTX, 'CustomOutputName': 'Texto del mensaje', 'WFTextActionText': tok(ref_out(uMS, 'Mensaje'))}),
+    com('Llave que ya no sirve:\n- Si la respuesta habla de la llave, se borra el archivo de llave.\n- Así la próxima vez el atajo vuelve a pedirla.'),
+    act('is.workflow.actions.conditional', {'GroupingIdentifier': grp2, 'WFControlFlowMode': 0, 'WFCondition': 99, 'WFConditionalActionString': 'llave',
+        'WFInput': {'Type': 'Variable', 'Variable': att(ref_out(uTX, 'Texto del mensaje'))}}),
+    act('is.workflow.actions.documentpicker.open', {'UUID': uF2, 'CustomOutputName': 'Llave a borrar', 'WFGetFilePath': ARCHIVO, 'WFFileErrorIfNotFound': False, 'WFShowFilePicker': False}),
+    act('is.workflow.actions.file.delete', {'WFInput': att(ref_out(uF2, 'Llave a borrar')), 'WFDeleteImmediatelyDelete': True}),
+    act('is.workflow.actions.conditional', {'GroupingIdentifier': grp2, 'WFControlFlowMode': 2, 'UUID': U()}),
+    act('is.workflow.actions.notification', {'UUID': uN, 'WFNotificationActionTitle': 'Mis finanzas', 'WFNotificationActionBody': tok(ref_out(uTX, 'Texto del mensaje'))}),
 ]
 wf = {'WFWorkflowActions': actions, 'WFWorkflowClientVersion': '2700.0.4', 'WFWorkflowHasOutputFallback': False,
       'WFWorkflowIcon': {'WFWorkflowIconGlyphNumber': 59395, 'WFWorkflowIconStartColor': 4292093695},
