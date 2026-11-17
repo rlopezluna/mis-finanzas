@@ -13,7 +13,7 @@
 <meta name="referrer" content="no-referrer">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<script src="config.js?v=68"></script>
+<script src="config.js?v=69"></script>
 <style>
 /* ===== Paleta: crema, café, verde olivo y vino ===== */
 :root{
@@ -303,11 +303,18 @@ dialog#shdlg[open]::backdrop{animation:fade 200ms ease-out both}
 dialog#shdlg.closing{animation:dlgOut 140ms ease-in both}dialog#shdlg.closing::backdrop{animation:fadeOut 140ms ease-in both}
 @keyframes dlgOut{to{opacity:0;transform:scale(.97)}}@keyframes fadeOut{to{opacity:0}}
 /* Aviso breve */
-#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:40;margin:0;max-width:calc(100vw - 32px);padding:10px 16px;border-radius:12px;background:var(--ink);color:var(--paper);font:600 0.875rem var(--sans);box-shadow:var(--sh-hi);opacity:0;transform:translate(-50%,8px);pointer-events:none;transition:opacity .18s ease,transform .22s var(--ease)}
-#toast.show{opacity:1;transform:translate(-50%,0)}
+#toast{position:fixed;left:16px;right:16px;bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:40;margin:0 auto;width:max-content;max-width:min(32rem,calc(100vw - 32px));box-sizing:border-box;padding:10px 16px;border-radius:12px;background:var(--ink);color:var(--paper);font:600 0.875rem var(--sans);box-shadow:var(--sh-hi);opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .18s ease,transform .22s var(--ease)}
+#toast.show{opacity:1;transform:none}
 .linkb.addn{font-size:0.8125rem;margin-left:8px;color:var(--mut)}
 @keyframes dlgIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
 
+/* Confirmación propia */
+dialog#cfdlg{border:0;padding:0;background:transparent;max-width:min(26rem,calc(100vw - 28px));width:100%;color:var(--ink)}
+dialog#cfdlg::backdrop{background:rgba(42,30,22,.42);backdrop-filter:blur(2px)}
+dialog#cfdlg[open]{animation:dlgIn 180ms var(--ease) both}
+.cfbox{padding:20px}.cft{margin:0 0 4px;font:600 1.0625rem/1.4 var(--sans)}
+.cfbox .shrow{justify-content:flex-end}
+@media (max-width:699px){.cfbox .shrow{flex-direction:column-reverse}.cfbox .shrow .btn{width:100%}}
 /* Vista de quien recibe el enlace */
 body.viewer #hd,body.viewer .tabs,body.viewer .skip,body.viewer #sync,body.viewer .cbar{display:none!important}
 body.viewer main{padding-bottom:40px}
@@ -474,6 +481,8 @@ input[type=month]{max-width:200px}
 #toast{display:flex;align-items:center;gap:14px;text-wrap:pretty}
 #toast button{background:none;border:0;padding:0;color:color-mix(in srgb,var(--paper) 70%,var(--acc));font:600 0.875rem var(--sans);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 #toast.act{pointer-events:auto}
+/* Como popover el navegador le pone inset:0, margen automático y borde: se regresan a la posición del aviso */
+#toast[popover]{inset:auto;left:16px;right:16px;bottom:calc(24px + env(safe-area-inset-bottom,0px));margin:0 auto;border:0;overflow:visible}
 /* ===== Pasada de diseño profesional ===== */
 /* Cifras en sans con números tabulares: se leen mejor y se ven igual en iPhone, Android y Windows */
 .big,.hv,.hbig,.htile b,.grid .card b,.card>b,.apn,.hamt span,.hamt input,.cs-ring b,.stamp .sc,.pie b,.rov,tr.dr td:first-child{font-family:var(--sans);font-feature-settings:"tnum" 1;letter-spacing:-.02em}
@@ -549,7 +558,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),
  .stamps{grid-template-columns:repeat(5,1fr);gap:12px 4px;padding:14px 8px}.stamp .sc{width:40px;height:40px;font-size:0.9375rem}.stamp{font-size:0.6875rem}
  .hm{text-align:left}.hero-top{align-items:flex-start}
  input,select,textarea,.btn{scroll-margin-bottom:110px}
- #toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+ #toast,#toast[popover]{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
  tr.dr td:last-child .linkb.addn{display:block;margin:8px 0 0;text-align:left}
 }
 </style></head><body><a class="skip" href="#app">Saltar al contenido</a><main>
@@ -564,4 +573,4 @@ input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),
 <div id="app" tabindex="-1"></div>
 <p class="note" id="sync"></p>
 </main>
-<script src="app.js?v=68"></script></body></html>
+<script src="app.js?v=69"></script></body></html>

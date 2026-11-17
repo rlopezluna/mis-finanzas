@@ -1,7 +1,7 @@
 // Mis finanzas — lógica de la app
 // Valores iniciales: todas las cuentas nuevas empiezan vacías (las cifras personales viven solo en la nube)
 // Versión de la app. Al publicar cambios, súbela aquí, en version.json y en los ?v= de index.html
-const APPV=68;
+const APPV=69;
 const DEF={total:0,monthly:0,day:30,start:'2026-11-30',pay:[]};
 const BDEF={cIni:0,cDate:'2026-11-02',dIni:0,dDate:'2026-11-02',vIni:0,vDate:'2026-11-02',vAmt:0,gs:'2026-10-30',dayA:15,amtA:0,dayB:30,amtB:0,sm:0,exp:[],sav:[],goal:0,debts:[],stm:[]};
 const isRafa=()=>!!ses&&ses.user==='rafa';
@@ -327,10 +327,10 @@ function download(name,text){const a=document.createElement('a');a.href=URL.crea
 function exportData(){download('mis-finanzas-'+today()+'.json',JSON.stringify({app:'mis-finanzas',formato:1,exportado:new Date().toISOString(),usuario:me&&me.user,loan:loanObj(),budget:B},null,2))}
 function importData(file){const m=$('#imsg');const rd=new FileReader();rd.onload=()=>{try{const j=JSON.parse(rd.result);
   if(!j||typeof j!=='object'||(!j.loan&&!j.budget))throw new Error('formato');
-  if(!confirm('Esto reemplazará tus datos actuales por los del archivo. ¿Continuar?'))return;
-  if(j.loan&&typeof j.loan==='object'){normS(j.loan);saveL()}
-  if(j.budget&&typeof j.budget==='object'&&can()){B=normB(j.budget);saveB()}
-  const m2=$('#imsg');if(m2){m2.className='note okm';m2.textContent='Datos restaurados.'}
+  pedirConfirmacion('Esto reemplazará tus datos actuales por los del archivo. ¿Continuar?','Restaurar',false).then(ok=>{if(!ok)return;
+   if(j.loan&&typeof j.loan==='object'){normS(j.loan);saveL()}
+   if(j.budget&&typeof j.budget==='object'&&can()){B=normB(j.budget);saveB()}
+   const m2=$('#imsg');if(m2){m2.className='note okm';m2.textContent='Datos restaurados.'}})
  }catch(e){if(m){m.className='note badm';m.textContent='El archivo no es un respaldo válido de Mis finanzas.'}}};rd.readAsText(file)}
 function accountHtml(){const g=role==='guest';
  return `<div class="card"><h3>Mi cuenta</h3><p class="note">Usuario: <strong>${esc(me?me.user:(ses?ses.user:'…'))}</strong>${g?'. Eres invitado'+(me&&me.owner?' de <strong>'+esc(me.owner)+'</strong>':'')+'. Puedes ver y editar su préstamo.':''}</p><p class="note">Versión ${APPV} de la app.</p><div class="row" style="margin:12px 0 0"><button type="button" class="btn" data-act="logout">Cerrar sesión</button></div></div><!--c1-->
@@ -354,7 +354,7 @@ async function changePw(){const c=$('#pc').value,n=$('#pn').value,n2=$('#pn2').v
  catch(e){m.textContent=e.code==='same_password'?'La nueva contraseña debe ser diferente a la actual.':e.code==='weak_password'?'La contraseña es muy débil; usa una más larga.':'No se pudo cambiar. Inténtalo de nuevo.'}}
 async function deleteAccount(){const p=$('#dpw').value,m=$('#dmsg');m.className='note badm';
  if(!p){m.textContent='Escribe tu contraseña.';return}
- if(!confirm('¿Seguro? Se borrarán tu cuenta, todos tus datos y las cuentas de tus invitados, para siempre.'))return;
+ if(!await pedirConfirmacion('¿Seguro? Se borrarán tu cuenta, todos tus datos y las cuentas de tus invitados, para siempre.','Eliminar mi cuenta'))return;
  try{await reauth(p)}catch(e){m.textContent=e.status>=400&&e.status<500?'La contraseña no es correcta.':'No se pudo conectar. Revisa tu internet.';return}
  try{await api('/rest/v1/rpc/delete_my_account',{method:'POST',body:{}});ses=null;saveSes();logout();err='Tu cuenta fue eliminada.';render()}
  catch(e){m.textContent='No se pudo eliminar. Inténtalo de nuevo.'}}
@@ -393,14 +393,29 @@ function countUp(el){const txt=el.textContent.trim();if(!/^-?\$/.test(txt))retur
  const t0=performance.now(),d=500;const step=n=>{const p=Math.min(1,(n-t0)/d),e=1-Math.pow(1-p,3);el.textContent=M(Number.isInteger(end)?Math.round(end*e):end*e);if(p<1&&el.isConnected)requestAnimationFrame(step);else el.textContent=txt};el.textContent=M(0);requestAnimationFrame(step)}
 function enterAnim(mode){const app=$('#app');app.classList.remove('first','tab');void app.offsetWidth;app.classList.add(mode);clearTimeout(enterAnim.t);enterAnim.t=setTimeout(()=>app.classList.remove('first','tab'),1100);
  if(mode==='first'&&!RM.matches)app.querySelectorAll('.hv,.grid .card b,.big').forEach(countUp)}
+// Confirmación con un <dialog> propio (en lugar de la ventana nativa del navegador): Cancelar, el botón seguro, recibe el foco;
+// se cierra con Esc o tocando afuera (closedby="any", con respaldo para Safari). Devuelve una promesa true/false.
+function pedirConfirmacion(msg,okLabel,peligro){return new Promise(res=>{let d=$('#cfdlg');
+ if(!d){d=document.createElement('dialog');d.id='cfdlg';d.setAttribute('aria-labelledby','cft');d.setAttribute('closedby','any');document.body.appendChild(d);
+  if(!('closedBy' in HTMLDialogElement.prototype))d.addEventListener('click',e=>{if(e.target===d)d.close('')})}
+ d.innerHTML=`<form method="dialog" class="shbox cfbox"><p id="cft" class="cft">${esc(msg)}</p><div class="row shrow"><button class="btn" value="no" autofocus>Cancelar</button><button class="btn ${peligro===false?'f':'del'}" value="si">${esc(okLabel||'Eliminar')}</button></div></form>`;
+ d.returnValue='';d.onclose=()=>{d.onclose=null;res(d.returnValue==='si')};d.showModal()})}
 // Lo que el usuario escribió en un campo de la fila (aunque todavía no se haya guardado)
 const rowStr=sel=>{const el=document.querySelector('#app '+sel);return el?String(el.value||'').trim():''};
 const rowVal=sel=>{const v=parseFloat(rowStr(sel).replace(/[^0-9.]/g,''));return isFinite(v)?v:0};
 // Aviso breve: confirma acciones cuyo efecto visual puede quedar fuera de la pantalla (p. ej. en el celular)
-function toast(msg,undo){let el=$('#toast');if(!el){el=document.createElement('p');el.id='toast';el.setAttribute('role','status');document.body.appendChild(el)}
+// Aviso breve en la capa superior (popover="manual": queda encima de cualquier diálogo). Con "Deshacer" dura 8 s
+// y no se cierra mientras se toca o tiene el foco, para dar tiempo de usarlo.
+const POP='popover' in HTMLElement.prototype;
+function toast(msg,undo){let el=$('#toast');
+ if(!el){el=document.createElement('p');el.id='toast';el.setAttribute('role','status');if(POP)el.popover='manual';document.body.appendChild(el);
+  const pause=()=>clearTimeout(toast.t),resume=()=>{clearTimeout(toast.t);toast.t=setTimeout(toast.hide,toast.ms)};
+  el.addEventListener('pointerenter',pause);el.addEventListener('pointerleave',resume);el.addEventListener('focusin',pause);el.addEventListener('focusout',resume);
+  toast.hide=()=>{el.classList.remove('show');setTimeout(()=>{if(POP&&!el.classList.contains('show')&&el.matches(':popover-open'))el.hidePopover()},260)}}
  el.textContent='';const s=document.createElement('span');s.textContent=msg;el.append(s);
- if(undo){const b=document.createElement('button');b.type='button';b.textContent='Deshacer';b.addEventListener('click',()=>{el.classList.remove('show');undo()});el.append(b)}
- el.classList.toggle('act',!!undo);el.classList.remove('show');void el.offsetWidth;el.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('show'),undo?4000:2200)}
+ if(undo){const b=document.createElement('button');b.type='button';b.textContent='Deshacer';b.addEventListener('click',()=>{toast.hide();undo()});el.append(b)}
+ el.classList.toggle('act',!!undo);if(POP){if(el.matches(':popover-open'))el.hidePopover();el.showPopover()}/* reabrirlo lo pone encima de un diálogo abierto después */
+ el.classList.remove('show');void el.offsetWidth;el.classList.add('show');toast.ms=undo?8000:2500;clearTimeout(toast.t);toast.t=setTimeout(toast.hide,toast.ms)}
 function pulse(el,cls,ms){if(!el)return;el.classList.remove(cls);void el.offsetWidth;el.classList.add(cls);setTimeout(()=>el.classList.remove(cls),ms)}
 document.addEventListener('toggle',e=>{const d=e.target;if(d&&d.classList&&d.classList.contains('fold')&&d.open)pulse(d,'opening',450)},true);
 function greet(){const d=new Date(),h=d.getHours(),g=h<5?'Buenas noches':h<12?'Buenos días':h<19?'Buenas tardes':'Buenas noches',u=(ses&&ses.user)||'',n=u?u.charAt(0).toUpperCase()+u.slice(1).replace(/_/g,' '):'';const T={loan:'Deudas',bud:'Presupuesto',coach:'Más',stats:'Más',acct:can()?'Más':'Cuenta'}[tab];$('#hello').textContent=T||(g+(n?', '+n:''));$('#today').textContent=T?'':d.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});document.body.classList.toggle('sub',!!T)}
@@ -482,9 +497,10 @@ document.addEventListener('click',e=>{
  if(a==='mtog'){toggleMethod(t.dataset.v);return}
  if(a==='hkind'){HD.kind=t.dataset.v;render();const q=$('#ha');if(q)q.focus();return}
  if(a==='hm'){if(curKind()==='g'){lastM=t.dataset.v;try{localStorage.setItem('lastm',lastM)}catch(x){}}else lastMi=t.dataset.v;render();return}
- if(a==='atact'){if(AT.st&&!confirm('Se creará una llave nueva y la anterior dejará de funcionar. ¿Continuar?'))return;activateAtajo();return}
- if(a==='atcreate'){if(AT.busy)return;if(AT.st&&!confirm('Se creará una llave nueva y la anterior dejará de funcionar. Tendrás que cambiarla en tu atajo. ¿Continuar?'))return;AT.busy=true;createAtajo().catch(()=>{}).finally(()=>{AT.busy=false});return}
- if(a==='atdel'){if(confirm('¿Borrar la llave? El atajo dejará de funcionar.'))delAtajo();return}
+ if(a==='atact'){if(AT.st)pedirConfirmacion('Se creará una llave nueva y la anterior dejará de funcionar. ¿Continuar?','Crear llave nueva',false).then(ok=>{if(ok)activateAtajo()});else activateAtajo();return}
+ if(a==='atcreate'){if(AT.busy)return;const go=()=>{AT.busy=true;createAtajo().catch(()=>{}).finally(()=>{AT.busy=false})};
+  if(AT.st)pedirConfirmacion('Se creará una llave nueva y la anterior dejará de funcionar. Tendrás que cambiarla en tu atajo. ¿Continuar?','Crear llave nueva',false).then(ok=>{if(ok)go()});else go();return}
+ if(a==='atdel'){pedirConfirmacion('¿Borrar la llave? El atajo dejará de funcionar.','Borrar llave').then(ok=>{if(ok)delAtajo()});return}
  if(a==='cpy'){const i=$(t.dataset.t);if(i){i.select();const ok=()=>{const o=t.textContent;t.textContent='¡Copiado!';setTimeout(()=>{t.textContent=o},1500)};if(navigator.clipboard)navigator.clipboard.writeText(i.value).then(ok,()=>{try{document.execCommand('copy');ok()}catch(x){}});else{try{document.execCommand('copy');ok()}catch(x){}}}return}
  if(a==='qm'){qmSel=t.dataset.v;document.querySelectorAll('.seg.qm button').forEach(b=>{const on=b.dataset.v===qmSel;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on)});return}
  if(a==='uimode'){setUI({mode:t.dataset.v},true);return}
@@ -492,13 +508,14 @@ document.addEventListener('click',e=>{
  if(a==='uireset'){setUI({acc:null,acc2:null},true);return}
  if(a==='share'){openShare(t.dataset.item,t.dataset.label);return}
  if(a==='shcreate'){createShare();return}
- if(a==='shstop'){if(shCur&&confirm('¿Dejar de compartir? El enlace dejará de funcionar.'))stopShare(shCur.item);return}
+ if(a==='shstop'){if(shCur)pedirConfirmacion('¿Dejar de compartir? El enlace dejará de funcionar.','Dejar de compartir').then(ok=>{if(ok)stopShare(shCur.item)});return}
  if(a==='shcopy'){copyShare(t);return}
  if(a==='shclose'){closeShare();return}
  if(a==='pwchg'){changePw();return}
  if(a==='export'){exportData();return}
  if(a==='delacct'){deleteAccount();return}
- if((a==='del'||a==='sdel'||a==='idel'||a==='stdel')&&!confirm(a==='stdel'?'¿Eliminar este estado de cuenta?':a==='sdel'?'¿Eliminar esta aportación al ahorro?':'¿Eliminar este registro?'))return;
+ if((a==='del'||a==='sdel'||a==='idel'||a==='stdel')&&!t.dataset.ok){
+  pedirConfirmacion(a==='stdel'?'¿Eliminar este estado de cuenta?':a==='sdel'?'¿Eliminar esta aportación al ahorro?':a==='idel'?'¿Eliminar este ingreso?':'¿Eliminar este gasto?').then(ok=>{if(!ok||!t.isConnected)return;t.dataset.ok='1';t.click();delete t.dataset.ok});return}
  if(a==='note'){const k=t.dataset.k;noteOpen.add(k);render();const [d,j]=k[0]==='L'?[null,k.slice(1)]:k.split(':');const q=$('#app').querySelector(d?`[data-df="n"][data-d="${CSS.escape(d)}"][data-i="${+j}"]`:`[data-f="n"][data-i="${+j}"]`);if(q)q.focus();return}
  if(a==='mark'){const typed=rowVal('[data-f="a"][data-i="'+i+'"]'),amt=typed>0?r2(typed):sched(i+1),d=sdt(rowStr('[data-f="d"][data-i="'+i+'"]'),S.pay[i].d||today());
   justPaid=i;S.pay[i]={a:amt,d,n:S.pay[i].n};saveL();toast('Pago '+(i+1)+': '+M(amt)+(typed>0?' registrado':' (mensualidad) marcado como pagado'))}
