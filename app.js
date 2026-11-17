@@ -1,7 +1,7 @@
 // Mis finanzas — lógica de la app
 // Valores iniciales: todas las cuentas nuevas empiezan vacías (las cifras personales viven solo en la nube)
 // Versión de la app. Al publicar cambios, súbela aquí, en version.json y en los ?v= de index.html
-const APPV=57;
+const APPV=58;
 const DEF={total:0,monthly:0,day:30,start:'2026-11-30',pay:[]};
 const BDEF={cIni:0,cDate:'2026-11-02',dIni:0,dDate:'2026-11-02',vIni:0,vDate:'2026-11-02',vAmt:0,gs:'2026-10-30',dayA:15,amtA:0,dayB:30,amtB:0,sm:0,exp:[],sav:[],goal:0,debts:[],stm:[]};
 const isRafa=()=>!!ses&&ses.user==='rafa';
@@ -639,7 +639,7 @@ function atajoCard(){if(!API)return '';if(AT.st===undefined)loadAtajo();
  if(AT.err==='sql')h+=`<p class="note badm">Falta actualizar la base de datos: ejecuta de nuevo supabase.sql en Supabase (ver README).</p>`;
  else if(AT.err==='red')h+=`<p class="note badm">No se pudo conectar. Revisa tu internet e inténtalo de nuevo.</p>`;
  if(AT.key&&ATURL)h+=`<div class="atgo"><p class="note okm"><b>${AT.copied?'Listo: tu llave ya está copiada.':'Tu llave está lista.'}</b></p><ol>${AT.copied?'':'<li>Copia tu llave con el botón de abajo.</li>'}<li>Toca <b>Abrir el atajo</b>.</li><li>Cuando te pida la llave, mantén presionado y elige <b>Pegar</b>.</li><li>Toca <b>Agregar atajo</b>. ¡Listo!</li></ol>
-  <a class="btn f go" href="${esc(ATURL)}" target="_blank" rel="noopener">Abrir el atajo</a>
+  <a class="btn f go" href="${esc(/^https:/.test(ATURL)?ATURL:ATURL+'?v='+APPV)}" target="_blank" rel="noopener">Abrir el atajo</a>
   <p class="note" style="margin-top:12px">${AT.copied?'Si no se pegó, cópiala aquí. ':''}Por seguridad la llave no se vuelve a mostrar.</p>${cpyRow('atk',AT.key,'Llave del atajo')}</div>`;
  else if(AT.key)h+=`<p class="note okm" style="margin-top:12px"><b>Tu llave nueva.</b> Cópiala ahora y pégala en el atajo: por seguridad no se vuelve a mostrar.</p>${cpyRow('atk',AT.key,'Llave del atajo')}`;
  else if(AT.st)h+=`<p class="note" style="margin-top:12px">Tienes una llave que termina en <b>…${esc(AT.st.pista)}</b>, creada el ${fdt(AT.st.creada)}. Último uso: ${AT.st.usada?fdt(AT.st.usada):'todavía no se usa'}.</p>`;

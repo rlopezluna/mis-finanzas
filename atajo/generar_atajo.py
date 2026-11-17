@@ -25,7 +25,7 @@ actions=[
  com('Registrar: manda a Mis finanzas la llave, el monto, la forma de pago elegida y el concepto; luego muestra la respuesta.'),
  act('is.workflow.actions.downloadurl',{'UUID':uR,'CustomOutputName':'Respuesta','WFURL':BASE+'atajo','WFHTTPMethod':'POST','ShowHeaders':True,
    'WFHTTPHeaders':dictval([field('apikey',tstr(APIKEY))]),'WFHTTPBodyType':'JSON','WFJSONValues':dictval([
-     field('llave',tvar(uT,'Llave')),field('monto',tvar(uA,'Monto'),1),field('metodo',tvar(uL,'Forma de pago')),field('concepto',tvar(uC,'Concepto'))])}),
+     field('llave',tvar(uT,'Llave')),field('monto',tvar(uA,'Monto')),field('metodo',tvar(uL,'Forma de pago')),field('concepto',tvar(uC,'Concepto'))])}),
  act('is.workflow.actions.getvalueforkey',{'UUID':uMS,'CustomOutputName':'Mensaje','WFGetDictionaryValueType':'Value','WFDictionaryKey':'mensaje','WFInput':tatt(uR,'Respuesta')}),
  act('is.workflow.actions.notification',{'UUID':uN,'WFNotificationActionTitle':'Mis finanzas','WFNotificationActionBody':tvar(uMS,'Mensaje')}),
 ]
