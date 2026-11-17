@@ -1,7 +1,7 @@
 // Mis finanzas — lógica de la app
 // Valores iniciales: todas las cuentas nuevas empiezan vacías (las cifras personales viven solo en la nube)
 // Versión de la app. Al publicar cambios, súbela aquí, en version.json y en los ?v= de index.html
-const APPV=64;
+const APPV=65;
 const DEF={total:0,monthly:0,day:30,start:'2026-11-30',pay:[]};
 const BDEF={cIni:0,cDate:'2026-11-02',dIni:0,dDate:'2026-11-02',vIni:0,vDate:'2026-11-02',vAmt:0,gs:'2026-10-30',dayA:15,amtA:0,dayB:30,amtB:0,sm:0,exp:[],sav:[],goal:0,debts:[],stm:[]};
 const isRafa=()=>!!ses&&ses.user==='rafa';
@@ -243,7 +243,7 @@ function incEditRow(o){const x=o.x;return `<div class="card" style="margin:8px 0
   <div class="fl"><span>Fecha</span><input id="xid" type="date" value="${esc(x.d||today())}"></div>
   <div class="fl"><span>De quién (opcional)</span><input id="xin" maxlength="120" value="${esc(x.n||'')}"></div>
   <div class="fl"><span>Recibido en</span><select id="xim" class="sel">${['e','d'].filter(k=>useM(k)||x.m===k).map(k=>`<option value="${k}"${x.m===k?' selected':''}>${METH[k]}</option>`).join('')}</select></div>
-  </div><div class="row" style="margin-top:12px"><button class="btn f" data-act="isave" data-i="${o.i}">Guardar cambios</button><button class="btn" data-act="icancel">Cancelar</button><button class="btn del" data-act="idel" data-i="${o.i}">Quitar</button></div></div>`}
+  </div><div class="row" style="margin-top:12px"><button class="btn f" data-act="isave" data-i="${o.i}">Guardar cambios</button><button class="btn" data-act="icancel">Cancelar</button><button class="btn del" data-act="idel" data-i="${o.i}">Eliminar ingreso</button></div></div>`}
 function ap(id,val,o){o=o||{};
  const ch=(o.chips||[]).map(q=>`<button type="button" class="chip" data-aq="${id}" data-v="${q}">${M(q).replace(/\.00$/,'')}</button>`).join('')+(o.clr?`<button type="button" class="chip" data-clr="${o.key}">Automático</button>`:'');
  return `<div class="ap"><div class="apr"><input id="${id}" class="apn" type="number" inputmode="decimal" step="0.01" min="0" placeholder="${o.ph||'0'}" value="${esc(val==null?'':val)}"${o.key?` data-b="${o.key}"`:''}></div>${ch?`<div class="chips">${ch}</div>`:''}</div>`}
@@ -501,7 +501,8 @@ document.addEventListener('click',e=>{
  else if(a==='collall'||a==='expall'){document.querySelectorAll('#app .cc').forEach(c=>{const hh=c.querySelector(':scope>h3');if(!hh)return;a==='collall'?CL.add(hh.dataset.ck):CL.delete(hh.dataset.ck);c.classList.toggle('collapsed',a==='collall');hh.setAttribute('aria-expanded',String(a!=='collall'))});saveCL()}
  else if(a==='xadd'){const k=t.dataset.k,n=($('#en'+k).value||'').trim(),m=parseFloat($('#ea'+k).value);if(n&&m>0){B.exp=(B.exp||[]).concat([{n,a:m,d:$('#ed'+k).value||today(),m:k,c:$('#ec'+k).value}]);saveB()}}
  else if(a==='iadd'){const k=t.dataset.k,m=parseFloat($('#ia'+k).value),d=$('#id'+k).value||today(),n=$('#in'+k).value.trim();if(m>0){B.inc=(B.inc||[]).concat([{m:k,a:m,d,n}]);saveB()}}
- else if(a==='idel'){B.inc=(B.inc||[]).filter((_,j)=>j!==i);editI=null;saveB()}
+ else if(a==='idel'){const L=B.inc||[],x=L[i];if(!x)return;B.inc=L.filter((_,j)=>j!==i);editI=null;saveB();
+  toast('Ingreso de '+M(x.a)+' eliminado',()=>{const N=(B.inc||[]).slice();N.splice(Math.min(i,N.length),0,x);B.inc=N;saveB();toast('Ingreso restaurado')})}
  else if(a==='iedit'){editI=i;editE=null;render()}
  else if(a==='icancel'){editI=null;render()}
  else if(a==='isave'){const m=parseFloat($('#xia').value),x=(B.inc||[])[i];if(m>0&&x){B.inc[i]=Object.assign({},x,{a:r2(m),d:sdt($('#xid').value,x.d||today()),n:$('#xin').value.trim().slice(0,120),m:/^[de]$/.test($('#xim').value)?$('#xim').value:x.m});editI=null;saveB();toast('Ingreso actualizado')}}
