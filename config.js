@@ -6,5 +6,5 @@ window.FINANZAS_CONFIG = {
   supabaseUrl: "https://qgbwrdunmdywekdquyxi.supabase.co",
   supabaseKey: "sb_publishable_BoSRUuFaVH-DOeIsuuwTgA_x87NbyLT",
   // Atajo "Gasto": el archivo firmado que se publica con la app (atajo/Gasto.shortcut) o un enlace de iCloud. Vacío = solo pasos manuales.
-  atajoUrl: "atajo/Gasto.shortcut"
+  atajoUrl: "https://www.icloud.com/shortcuts/0a4a7fa84c254325a6791847e1f294b6"
 };
