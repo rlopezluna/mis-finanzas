@@ -1,7 +1,7 @@
 // Mis finanzas — lógica de la app
 // Valores iniciales: todas las cuentas nuevas empiezan vacías (las cifras personales viven solo en la nube)
 // Versión de la app. Al publicar cambios, súbela aquí, en version.json y en los ?v= de index.html
-const APPV=63;
+const APPV=64;
 const DEF={total:0,monthly:0,day:30,start:'2026-11-30',pay:[]};
 const BDEF={cIni:0,cDate:'2026-11-02',dIni:0,dDate:'2026-11-02',vIni:0,vDate:'2026-11-02',vAmt:0,gs:'2026-10-30',dayA:15,amtA:0,dayB:30,amtB:0,sm:0,exp:[],sav:[],goal:0,debts:[],stm:[]};
 const isRafa=()=>!!ses&&ses.user==='rafa';
@@ -237,7 +237,7 @@ function editRow(x){const e=x.e;return `<div class="card" style="margin:8px 0;pa
   <div class="fl"><span>Fecha</span><input id="xed" type="date" value="${esc(e.d||today())}"></div>
   <div class="fl"><span>Categoría</span><select id="xec" class="sel">${CATS.map(c=>`<option${c===(e.c||'Otro')?' selected':''}>${c}</option>`).join('')}</select></div>
   <div class="fl"><span>Pagado con</span><select id="xem" class="sel">${['c','d','e','v'].filter(k=>useM(k)||(e.m||'c')===k).map(k=>`<option value="${esc(k)}"${(e.m||'c')===k?' selected':''}>${METH[k]}</option>`).join('')}</select></div>
-  </div><div class="row" style="margin-top:12px"><button class="btn f" data-act="esave" data-i="${x.i}">Guardar cambios</button><button class="btn" data-act="ecancel">Cancelar</button></div></div>`}
+  </div><div class="row" style="margin-top:12px"><button class="btn f" data-act="esave" data-i="${x.i}">Guardar cambios</button><button class="btn" data-act="ecancel">Cancelar</button><button class="btn del" data-act="del" data-i="${x.i}">Eliminar gasto</button></div></div>`}
 function incEditRow(o){const x=o.x;return `<div class="card" style="margin:8px 0;padding:14px"><h3 style="margin:0 0 10px">Editar ingreso</h3><div class="pg">
   <div class="fl"><span>Monto</span>${ap('xia',x.a)}</div>
   <div class="fl"><span>Fecha</span><input id="xid" type="date" value="${esc(x.d||today())}"></div>
@@ -510,7 +510,8 @@ document.addEventListener('click',e=>{
  else if(a==='eedit'){editE=i;editI=null;render()}
  else if(a==='ecancel'){editE=null;render()}
  else if(a==='esave'){const n=$('#xen').value.trim(),m=parseFloat($('#xea').value);if(m>0&&B.exp[i]){B.exp[i]=Object.assign({},B.exp[i],{n,a:m,d:$('#xed').value||today(),c:$('#xec').value,m:$('#xem').value});editE=null;saveB()}}
- else if(a==='del'){B.exp.splice(i,1);saveB()}
+ else if(a==='del'){const x=B.exp[i];if(!x)return;B.exp.splice(i,1);editE=null;saveB();
+  toast('Gasto de '+M(x.a)+' eliminado',()=>{B.exp.splice(Math.min(i,B.exp.length),0,x);saveB();toast('Gasto restaurado')})}
  else if(a==='sdel'){B.sav.splice(i,1);saveB()}
  else if(a==='add'){const n=$('#en').value.trim(),m=parseFloat($('#ea').value);if(n&&m>0){B.exp.push({n,a:m,d:$('#ed').value||today(),m:QM().includes(qmSel)?qmSel:(QM()[0]||'c'),c:$('#ec').value});saveB()}}
  else if(a==='copysum'){const ta=$('#sumt');ta.focus();ta.select();let ok=false;try{ok=document.execCommand('copy')}catch(x){}
