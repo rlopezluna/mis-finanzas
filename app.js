@@ -1,7 +1,7 @@
 // Mis finanzas — lógica de la app
 // Valores iniciales: todas las cuentas nuevas empiezan vacías (las cifras personales viven solo en la nube)
 // Versión de la app. Al publicar cambios, súbela aquí, en version.json y en los ?v= de index.html
-const APPV=60;
+const APPV=61;
 const DEF={total:0,monthly:0,day:30,start:'2026-11-30',pay:[]};
 const BDEF={cIni:0,cDate:'2026-11-02',dIni:0,dDate:'2026-11-02',vIni:0,vDate:'2026-11-02',vAmt:0,gs:'2026-10-30',dayA:15,amtA:0,dayB:30,amtB:0,sm:0,exp:[],sav:[],goal:0,debts:[],stm:[]};
 const isRafa=()=>!!ses&&ses.user==='rafa';
@@ -479,7 +479,7 @@ document.addEventListener('click',e=>{
  if(a==='hm'){if(curKind()==='g'){lastM=t.dataset.v;try{localStorage.setItem('lastm',lastM)}catch(x){}}else lastMi=t.dataset.v;render();return}
  if(a==='hsave'){homeSave();return}
  if(a==='atact'){if(AT.st&&!confirm('Se creará una llave nueva y la anterior dejará de funcionar. ¿Continuar?'))return;activateAtajo();return}
- if(a==='atcreate'){if(AT.st&&!confirm('Se creará una llave nueva y la anterior dejará de funcionar. Tendrás que cambiarla en tu atajo. ¿Continuar?'))return;createAtajo();return}
+ if(a==='atcreate'){if(AT.busy)return;if(AT.st&&!confirm('Se creará una llave nueva y la anterior dejará de funcionar. Tendrás que cambiarla en tu atajo. ¿Continuar?'))return;AT.busy=true;createAtajo().catch(()=>{}).finally(()=>{AT.busy=false});return}
  if(a==='atdel'){if(confirm('¿Borrar la llave? El atajo dejará de funcionar.'))delAtajo();return}
  if(a==='cpy'){const i=$(t.dataset.t);if(i){i.select();const ok=()=>{const o=t.textContent;t.textContent='¡Copiado!';setTimeout(()=>{t.textContent=o},1500)};if(navigator.clipboard)navigator.clipboard.writeText(i.value).then(ok,()=>{try{document.execCommand('copy');ok()}catch(x){}});else{try{document.execCommand('copy');ok()}catch(x){}}}return}
  if(a==='qm'){qmSel=t.dataset.v;document.querySelectorAll('.seg.qm button').forEach(b=>{const on=b.dataset.v===qmSel;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on)});return}
@@ -630,7 +630,8 @@ const ATURL=(u=>/^https:\/\/www\.icloud\.com\/shortcuts\/[A-Za-z0-9]{20,64}\/?$/
 function copyLater(p){try{if(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write)
  return navigator.clipboard.write([new ClipboardItem({'text/plain':p.then(t=>new Blob([t],{type:'text/plain'}))})]).then(()=>true,()=>p.then(t=>navigator.clipboard.writeText(t)).then(()=>true,()=>false))}catch(e){}
  return p.then(t=>navigator.clipboard?navigator.clipboard.writeText(t).then(()=>true,()=>false):false,()=>false)}
-async function activateAtajo(){const kp=createAtajo();AT.copied=await copyLater(kp);kp.catch(()=>{});render()}
+// Un solo intento a la vez: un doble toque creaba dos llaves y la copiada podía ser la que ya no sirve
+async function activateAtajo(){if(AT.busy)return;AT.busy=true;try{const kp=createAtajo();AT.copied=await copyLater(kp);await kp.catch(()=>{})}finally{AT.busy=false}render()}
 async function delAtajo(){try{await api('/rest/v1/rpc/borrar_llave_atajo',{method:'POST',body:{}});AT.key='';AT.st=null;render();toast('Llave borrada')}catch(e){AT.err='red';render()}}
 const cpyRow=(id,val,lbl)=>`<div class="shlink"><input id="${id}" readonly value="${esc(val)}" aria-label="${esc(lbl)}"><button type="button" class="btn" data-act="cpy" data-t="#${id}">Copiar</button></div>`;
 const fdt=s=>s?new Date(s).toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'}):'';
