@@ -1,7 +1,7 @@
 // Mis finanzas — lógica de la app
 // Valores iniciales: todas las cuentas nuevas empiezan vacías (las cifras personales viven solo en la nube)
 // Versión de la app. Al publicar cambios, súbela aquí, en version.json y en los ?v= de index.html
-const APPV=67;
+const APPV=68;
 const DEF={total:0,monthly:0,day:30,start:'2026-11-30',pay:[]};
 const BDEF={cIni:0,cDate:'2026-11-02',dIni:0,dDate:'2026-11-02',vIni:0,vDate:'2026-11-02',vAmt:0,gs:'2026-10-30',dayA:15,amtA:0,dayB:30,amtB:0,sm:0,exp:[],sav:[],goal:0,debts:[],stm:[]};
 const isRafa=()=>!!ses&&ses.user==='rafa';
@@ -393,6 +393,9 @@ function countUp(el){const txt=el.textContent.trim();if(!/^-?\$/.test(txt))retur
  const t0=performance.now(),d=500;const step=n=>{const p=Math.min(1,(n-t0)/d),e=1-Math.pow(1-p,3);el.textContent=M(Number.isInteger(end)?Math.round(end*e):end*e);if(p<1&&el.isConnected)requestAnimationFrame(step);else el.textContent=txt};el.textContent=M(0);requestAnimationFrame(step)}
 function enterAnim(mode){const app=$('#app');app.classList.remove('first','tab');void app.offsetWidth;app.classList.add(mode);clearTimeout(enterAnim.t);enterAnim.t=setTimeout(()=>app.classList.remove('first','tab'),1100);
  if(mode==='first'&&!RM.matches)app.querySelectorAll('.hv,.grid .card b,.big').forEach(countUp)}
+// Lo que el usuario escribió en un campo de la fila (aunque todavía no se haya guardado)
+const rowStr=sel=>{const el=document.querySelector('#app '+sel);return el?String(el.value||'').trim():''};
+const rowVal=sel=>{const v=parseFloat(rowStr(sel).replace(/[^0-9.]/g,''));return isFinite(v)?v:0};
 // Aviso breve: confirma acciones cuyo efecto visual puede quedar fuera de la pantalla (p. ej. en el celular)
 function toast(msg,undo){let el=$('#toast');if(!el){el=document.createElement('p');el.id='toast';el.setAttribute('role','status');document.body.appendChild(el)}
  el.textContent='';const s=document.createElement('span');s.textContent=msg;el.append(s);
@@ -498,7 +501,8 @@ document.addEventListener('click',e=>{
  if(a==='delacct'){deleteAccount();return}
  if((a==='del'||a==='sdel'||a==='idel'||a==='stdel')&&!confirm(a==='stdel'?'¿Eliminar este estado de cuenta?':a==='sdel'?'¿Eliminar esta aportación al ahorro?':'¿Eliminar este registro?'))return;
  if(a==='note'){const k=t.dataset.k;noteOpen.add(k);render();const [d,j]=k[0]==='L'?[null,k.slice(1)]:k.split(':');const q=$('#app').querySelector(d?`[data-df="n"][data-d="${CSS.escape(d)}"][data-i="${+j}"]`:`[data-f="n"][data-i="${+j}"]`);if(q)q.focus();return}
- if(a==='mark'){justPaid=i;S.pay[i]={a:sched(i+1),d:today(),n:S.pay[i].n};saveL();toast('Pago '+(i+1)+' marcado como pagado')}
+ if(a==='mark'){const typed=rowVal('[data-f="a"][data-i="'+i+'"]'),amt=typed>0?r2(typed):sched(i+1),d=sdt(rowStr('[data-f="d"][data-i="'+i+'"]'),S.pay[i].d||today());
+  justPaid=i;S.pay[i]={a:amt,d,n:S.pay[i].n};saveL();toast('Pago '+(i+1)+': '+M(amt)+(typed>0?' registrado':' (mensualidad) marcado como pagado'))}
  else if(a==='undo'){S.pay[i]={a:0,d:'',n:S.pay[i].n};saveL()}
  else if(a==='collall'||a==='expall'){document.querySelectorAll('#app .cc').forEach(c=>{const hh=c.querySelector(':scope>h3');if(!hh)return;a==='collall'?CL.add(hh.dataset.ck):CL.delete(hh.dataset.ck);c.classList.toggle('collapsed',a==='collall');hh.setAttribute('aria-expanded',String(a!=='collall'))});saveCL()}
  else if(a==='xadd'){const k=t.dataset.k,n=($('#en'+k).value||'').trim(),m=parseFloat($('#ea'+k).value);if(n&&m>0){B.exp=(B.exp||[]).concat([{n,a:m,d:$('#ed'+k).value||today(),m:k,c:$('#ec'+k).value}]);saveB()}}
@@ -526,7 +530,8 @@ document.addEventListener('click',e=>{
  else if(a==='stadd'){const c=$('#xc').value.trim(),sx=$('#xs').value;if(c&&sx!==''){B.stm.push({id:Date.now().toString(36),c,m:$('#xm').value,sal:parseFloat(sx)||0,min:parseFloat($('#xi').value)||0,l:$('#xl').value,n:$('#xn').value.trim(),pd:''});saveB()}}
  else if(a==='stpay'||a==='stundo'||a==='stdel'){const x=B.stm.find(z=>z.id===t.dataset.x);if(x){if(a==='stpay')x.pd=today();else if(a==='stundo')x.pd='';else{const k=B.stm.indexOf(x);B.stm=B.stm.filter(z=>z!==x);toast('Estado de cuenta de '+x.c+' eliminado',()=>{const N=B.stm.slice();N.splice(Math.min(k,N.length),0,x);B.stm=N;saveB();toast('Estado de cuenta restaurado')})}saveB()}}
  else if(t.dataset.d&&B.debts.some(x=>x.id===t.dataset.d)){const D=B.debts.find(x=>x.id===t.dataset.d);
-  if(a==='dmark'){D.pay[i]={a:ds(D,i+1),d:today(),n:D.pay[i].n};saveB();toast(D.n+': pago '+(i+1)+' marcado como pagado')}
+  if(a==='dmark'){const sel='[data-d="'+CSS.escape(D.id)+'"][data-i="'+i+'"]',typed=rowVal('[data-df="a"]'+sel),amt=typed>0?r2(typed):ds(D,i+1),d=sdt(rowStr('[data-df="d"]'+sel),D.pay[i].d||today());
+   D.pay[i]={a:amt,d,n:D.pay[i].n};saveB();toast(D.n+': pago '+(i+1)+', '+M(amt)+(typed>0?' registrado':' (mensualidad) marcado como pagado'))}
   else if(a==='dundo'){D.pay[i]={a:0,d:'',n:D.pay[i].n};saveB()}
   else if(a==='ddel'){cfm=D.id;render()}
   else if(a==='ddely'){const k=B.debts.indexOf(D);if(SH['debt:'+D.id])stopShare('debt:'+D.id);B.debts=B.debts.filter(x=>x!==D);cfm='';saveB();
