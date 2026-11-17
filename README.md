@@ -204,7 +204,15 @@ Abre http://localhost:8000. Usa la misma base de datos de Supabase que la versi�
 
 ---
 
-## Novedades (versión 56): dirección tolerante para el atajo
+## Novedades (versión 69): revisión con modern-web-guidance (Google Chrome)
+
+- **Tamaño de texto del sistema:** la app sigue el tamaño de letra que elijas en el teléfono (iPhone: Ajustes → Pantalla y brillo → Tamaño del texto). Los campos y avisos crecen con la letra.
+- **Formularios reales** en el inicio de sesión y en la captura de Inicio: Enter / "Ir" del teclado funcionan y el llavero de iCloud puede guardar y rellenar tu contraseña.
+- **Confirmaciones propias** (en lugar de la ventana gris del navegador) para eliminar, dejar de compartir, restaurar respaldo, la llave del atajo y eliminar la cuenta. "Cancelar" queda seleccionado; se cierran con Esc o tocando afuera.
+- **Aviso con Deshacer:** dura 8 segundos, no se cierra mientras lo tocas y siempre queda encima de todo.
+- Sin destello blanco al abrir en modo oscuro; el diálogo de compartir se cierra tocando afuera y la página de atrás ya no se desplaza.
+
+## Versión 56): dirección tolerante para el atajo
 
 - El atajo registra en `…/rest/v1/rpc/atajo`, que acepta el JSON tal como lo mande el iPhone: ignora mayúsculas, acentos y espacios en los nombres de los campos, acepta el monto como número o texto ("1,500") y, si falta algo, la notificación dice qué campos llegaron. Si ya armaste el atajo, cambia la dirección del segundo "Obtener contenido de URL".
 
