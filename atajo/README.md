@@ -1,6 +1,6 @@
 # Atajo de iPhone "Gasto"
 
-- **Enlace de iCloud** (el que usa la app en `config.js` → `atajoUrl`): https://www.icloud.com/shortcuts/0a4a7fa84c254325a6791847e1f294b6. El iPhone no instala un `.shortcut` abierto desde una página web (se queda en blanco), por eso la app usa este enlace.
+- **Enlace de iCloud** (el que usa la app en `config.js` → `atajoUrl`): https://www.icloud.com/shortcuts/2df301ae307743ac9fbaf779ecfff60f. El iPhone no instala un `.shortcut` abierto desde una página web (se queda en blanco), por eso la app usa este enlace.
 - `Gasto.shortcut`: atajo firmado (formato AEA1, modo "anyone"). Sirve para instalarlo a mano (Safari → Descargar → abrir) y para generar un enlace de iCloud nuevo si cambia el atajo.
 - `Gasto.xml`: el mismo atajo sin firmar (plist XML), validado con el validador de [Shortcuts Playground](https://github.com/viticci/shortcuts-playground-plugin).
 - `generar_atajo.py`: genera `Gasto.xml` (`python3 generar_atajo.py Gasto.xml`).
