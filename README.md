@@ -204,7 +204,14 @@ Abre http://localhost:8000. Usa la misma base de datos de Supabase que la versi�
 
 ---
 
-## Novedades (versión 69): revisión con modern-web-guidance (Google Chrome)
+## Novedades (versión 72): tu plan, tus reglas
+
+- En **Presupuesto → Plan del mes** eliges cada cuánto recibes tu ingreso: **semanal** (y qué día), **quincenal** (dos depósitos y sus días) o **mensual** (y qué día).
+- También eliges si tu **límite de gasto** es **quincenal** o **mensual**. Inicio muestra "Puedes gastar esta quincena" o "este mes".
+- **Ya no se descuenta nada solo**: tu límite es tu ingreso del periodo. Si quieres apartar para el préstamo, compras a meses o ahorro, escribe tu propio límite; "Igual a mi ingreso" lo regresa.
+- La meta de ahorro mensual queda solo para seguimiento, y el Coach avisa si tus límites suman más que tu ingreso.
+
+## Versión 69): revisión con modern-web-guidance (Google Chrome)
 
 - **Tamaño de texto del sistema:** la app sigue el tamaño de letra que elijas en el teléfono (iPhone: Ajustes → Pantalla y brillo → Tamaño del texto). Los campos y avisos crecen con la letra.
 - **Formularios reales** en el inicio de sesión y en la captura de Inicio: Enter / "Ir" del teclado funcionan y el llavero de iCloud puede guardar y rellenar tu contraseña.
