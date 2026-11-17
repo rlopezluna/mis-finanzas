@@ -5,6 +5,6 @@
 window.FINANZAS_CONFIG = {
   supabaseUrl: "https://qgbwrdunmdywekdquyxi.supabase.co",
   supabaseKey: "sb_publishable_BoSRUuFaVH-DOeIsuuwTgA_x87NbyLT",
-  // Enlace de iCloud del atajo modelo "Gasto" (Atajos → compartir → Copiar enlace de iCloud). Vacío = solo pasos manuales.
-  atajoUrl: ""
+  // Atajo "Gasto": el archivo firmado que se publica con la app (atajo/Gasto.shortcut) o un enlace de iCloud. Vacío = solo pasos manuales.
+  atajoUrl: "atajo/Gasto.shortcut"
 };
