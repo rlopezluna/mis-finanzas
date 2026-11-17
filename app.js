@@ -1,7 +1,7 @@
 // Mis finanzas — lógica de la app
 // Valores iniciales: todas las cuentas nuevas empiezan vacías (las cifras personales viven solo en la nube)
 // Versión de la app. Al publicar cambios, súbela aquí, en version.json y en los ?v= de index.html
-const APPV=65;
+const APPV=66;
 const DEF={total:0,monthly:0,day:30,start:'2026-11-30',pay:[]};
 const BDEF={cIni:0,cDate:'2026-11-02',dIni:0,dDate:'2026-11-02',vIni:0,vDate:'2026-11-02',vAmt:0,gs:'2026-10-30',dayA:15,amtA:0,dayB:30,amtB:0,sm:0,exp:[],sav:[],goal:0,debts:[],stm:[]};
 const isRafa=()=>!!ses&&ses.user==='rafa';
@@ -92,7 +92,7 @@ function stmHtml(){
  if(!L.length)h+=`<p class="note">Aún no hay estados de cuenta. Agrega el de cada tarjeta cuando te llegue.</p>`;
  L.forEach(x=>{const st=x.pd?'Pagado':(x.l&&x.l<t?'Atrasado':'Pendiente'),lb=st==='Pendiente'?'Por pagar':st==='Atrasado'?'Vencido':'Pagado';
   h+=`<div class="ex" style="align-items:center"><span><span><b>${esc(x.c)}</b>, ${esc((x.m||'').split('-').reverse().join('/'))}<br><span class="note">Saldo ${M(x.sal)}, mínimo ${M(x.min)}${x.l?', vence el '+fmtD(x.l):''}${x.n?'. '+esc(x.n):''}</span></span></span>
-  <span><span class="st ${st}">${lb}</span> ${x.pd?`<button class="btn" data-act="stundo" data-x="${x.id}">Deshacer</button>`:`<button class="btn f" data-act="stpay" data-x="${x.id}">Marcar pagado</button>`} <button class="btn" data-act="stdel" data-x="${x.id}">Quitar</button></span></div>`});
+  <span><span class="st ${st}">${lb}</span> ${x.pd?`<button class="btn" data-act="stundo" data-x="${x.id}">Deshacer</button>`:`<button class="btn f" data-act="stpay" data-x="${x.id}">Marcar pagado</button>`} <button class="btn del" data-act="stdel" data-x="${x.id}">Eliminar</button></span></div>`});
  h+=`<div class="pg" style="margin-top:12px"><div class="fl"><span>Tarjeta</span><input id="xc" placeholder="NU, BBVA…"></div><div class="fl"><span>Mes del estado</span><input id="xm" type="month" value="${esc(t.slice(0,7))}"></div><div class="fl"><span>Saldo a pagar</span><input id="xs" type="number" step="0.01" inputmode="decimal"></div><div class="fl"><span>Pago mínimo</span><input id="xi" type="number" step="0.01" inputmode="decimal"></div><div class="fl"><span>Fecha límite</span><input id="xl" type="date"></div><div class="fl"><span>Nota <small>(opcional)</small></span><input id="xn"></div><div class="fl"><span>&nbsp;</span><button class="btn f" data-act="stadd">Agregar estado</button></div></div></div>`;
  return h}
 const nx30=()=>{const d=new Date();let c=mkD(d.getFullYear(),d.getMonth(),30);if(c<=today())c=mkD(d.getFullYear(),d.getMonth()+1,30);return c};
@@ -453,7 +453,7 @@ h+=loansHtml();
   <div class="row"><label>Meta total (opcional)<input type="number" step="0.01" data-b="goal" value="${esc(B.goal||'')}"></label></div>`;
   if(B.goal>0){const g=Math.min(100,sv/B.goal*100);h+=`<div class="bar"><i style="width:${g}%"></i></div><p class="note" style="margin:0 0 8px">${g.toFixed(1)}% de la meta. Faltan ${M(Math.max(0,B.goal-sv))}.</p>`}
   if(!B.sav.length)h+=`<p class="note">Aún no hay aportaciones.</p>`;
-  B.sav.forEach((e,i)=>{h+=`<div class="ex"><span>${fmtD(e.d)} ${esc(e.n)}</span><span>${M(e.a)} <button class="btn" data-act="sdel" data-i="${i}">Quitar</button></span></div>`});
+  B.sav.forEach((e,i)=>{h+=`<div class="ex"><span>${fmtD(e.d)} ${esc(e.n)}</span><span>${M(e.a)} <button class="btn del" data-act="sdel" data-i="${i}">Eliminar</button></span></div>`});
   h+=`<div class="row pg" style="margin-top:12px"><input id="sn" placeholder="Nota (opcional)…">${ap('sa','',{st:100,ph:'Monto',chips:[100,500,1000]})}<button class="btn f" data-act="sadd">Agregar al ahorro</button></div></div>`;
  }
  const fk=focusKey();if(!animTab)$('#app').classList.remove('first','tab');$('#app').innerHTML=h;decorate();restoreFocus(fk);if(animTab){const m=animTab;animTab='';enterAnim(m)}
@@ -494,7 +494,7 @@ document.addEventListener('click',e=>{
  if(a==='pwchg'){changePw();return}
  if(a==='export'){exportData();return}
  if(a==='delacct'){deleteAccount();return}
- if((a==='del'||a==='sdel'||a==='idel'||a==='stdel')&&!confirm('¿Quitar este registro?'))return;
+ if((a==='del'||a==='sdel'||a==='idel'||a==='stdel')&&!confirm(a==='stdel'?'¿Eliminar este estado de cuenta?':a==='sdel'?'¿Eliminar esta aportación al ahorro?':'¿Eliminar este registro?'))return;
  if(a==='note'){const k=t.dataset.k;noteOpen.add(k);render();const [d,j]=k[0]==='L'?[null,k.slice(1)]:k.split(':');const q=$('#app').querySelector(d?`[data-df="n"][data-d="${CSS.escape(d)}"][data-i="${+j}"]`:`[data-f="n"][data-i="${+j}"]`);if(q)q.focus();return}
  if(a==='mark'){justPaid=i;S.pay[i]={a:sched(i+1),d:today(),n:S.pay[i].n};saveL();toast('Pago '+(i+1)+' marcado como pagado')}
  else if(a==='undo'){S.pay[i]={a:0,d:'',n:S.pay[i].n};saveL()}
@@ -513,7 +513,8 @@ document.addEventListener('click',e=>{
  else if(a==='esave'){const n=$('#xen').value.trim(),m=parseFloat($('#xea').value);if(m>0&&B.exp[i]){B.exp[i]=Object.assign({},B.exp[i],{n,a:m,d:$('#xed').value||today(),c:$('#xec').value,m:$('#xem').value});editE=null;saveB()}}
  else if(a==='del'){const x=B.exp[i];if(!x)return;B.exp.splice(i,1);editE=null;saveB();
   toast('Gasto de '+M(x.a)+' eliminado',()=>{B.exp.splice(Math.min(i,B.exp.length),0,x);saveB();toast('Gasto restaurado')})}
- else if(a==='sdel'){B.sav.splice(i,1);saveB()}
+ else if(a==='sdel'){const x=B.sav[i];if(!x)return;B.sav.splice(i,1);saveB();
+  toast('Ahorro de '+M(x.a)+' eliminado',()=>{B.sav.splice(Math.min(i,B.sav.length),0,x);saveB();toast('Ahorro restaurado')})}
  else if(a==='add'){const n=$('#en').value.trim(),m=parseFloat($('#ea').value);if(n&&m>0){B.exp.push({n,a:m,d:$('#ed').value||today(),m:QM().includes(qmSel)?qmSel:(QM()[0]||'c'),c:$('#ec').value});saveB()}}
  else if(a==='copysum'){const ta=$('#sumt');ta.focus();ta.select();let ok=false;try{ok=document.execCommand('copy')}catch(x){}
   if(!ok&&navigator.clipboard){navigator.clipboard.writeText(ta.value).then(()=>{t.textContent='¡Copiado!'},()=>{t.textContent='Selecciona el texto y cópialo'});return}
@@ -521,7 +522,7 @@ document.addEventListener('click',e=>{
  else if(a==='dadd'){const pr=parseFloat($('#dp').value),tt=parseFloat($('#dt').value)||pr,mn=parseFloat($('#dmn').value),st=$('#dd').value;let mo=parseInt($('#dmo').value);if(mn>0&&tt>0)mo=Math.ceil(tt/mn-1e-9);
   if(pr>0&&mo>=1&&mo<=120&&st){const nid=Date.now().toString(36);openF[nid]=true;showNew=false;B.debts.push({id:nid,n:$('#dn').value.trim()||'Compra',price:pr,total:tt,months:mo,mo:mn>0?mn:r2(tt/mo),start:st,pay:Array.from({length:mo},()=>({a:0,d:'',n:''}))});saveB()}}
  else if(a==='stadd'){const c=$('#xc').value.trim(),sx=$('#xs').value;if(c&&sx!==''){B.stm.push({id:Date.now().toString(36),c,m:$('#xm').value,sal:parseFloat(sx)||0,min:parseFloat($('#xi').value)||0,l:$('#xl').value,n:$('#xn').value.trim(),pd:''});saveB()}}
- else if(a==='stpay'||a==='stundo'||a==='stdel'){const x=B.stm.find(z=>z.id===t.dataset.x);if(x){if(a==='stpay')x.pd=today();else if(a==='stundo')x.pd='';else B.stm=B.stm.filter(z=>z!==x);saveB()}}
+ else if(a==='stpay'||a==='stundo'||a==='stdel'){const x=B.stm.find(z=>z.id===t.dataset.x);if(x){if(a==='stpay')x.pd=today();else if(a==='stundo')x.pd='';else{const k=B.stm.indexOf(x);B.stm=B.stm.filter(z=>z!==x);toast('Estado de cuenta de '+x.c+' eliminado',()=>{const N=B.stm.slice();N.splice(Math.min(k,N.length),0,x);B.stm=N;saveB();toast('Estado de cuenta restaurado')})}saveB()}}
  else if(t.dataset.d&&B.debts.some(x=>x.id===t.dataset.d)){const D=B.debts.find(x=>x.id===t.dataset.d);
   if(a==='dmark'){D.pay[i]={a:ds(D,i+1),d:today(),n:D.pay[i].n};saveB();toast(D.n+': pago '+(i+1)+' marcado como pagado')}
   else if(a==='dundo'){D.pay[i]={a:0,d:'',n:D.pay[i].n};saveB()}
