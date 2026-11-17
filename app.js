@@ -1,9 +1,9 @@
 // Mis finanzas — lógica de la app
 // Valores iniciales: todas las cuentas nuevas empiezan vacías (las cifras personales viven solo en la nube)
 // Versión de la app. Al publicar cambios, súbela aquí, en version.json y en los ?v= de index.html
-const APPV=71;
+const APPV=72;
 const DEF={total:0,monthly:0,day:30,start:'2026-11-30',pay:[]};
-const BDEF={cIni:0,cDate:'2026-11-02',dIni:0,dDate:'2026-11-02',vIni:0,vDate:'2026-11-02',vAmt:0,gs:'2026-10-30',dayA:15,amtA:0,dayB:30,amtB:0,sm:0,exp:[],sav:[],goal:0,debts:[],stm:[]};
+const BDEF={cIni:0,cDate:'2026-11-02',dIni:0,dDate:'2026-11-02',vIni:0,vDate:'2026-11-02',vAmt:0,gs:'2026-10-30',dayA:15,amtA:0,dayB:30,amtB:0,freq:'q',incW:0,wday:5,amtM:0,dayM:1,limP:'q',lim:null,sm:0,exp:[],sav:[],goal:0,debts:[],stm:[]};
 const isRafa=()=>!!ses&&ses.user==='rafa';
 const loanTitle=()=>isRafa()?'Préstamo familiar':'Préstamo';
 const cl=o=>JSON.parse(JSON.stringify(o));
@@ -42,7 +42,11 @@ const normS=o=>{o=o&&typeof o==='object'?o:{};S={t:num(o.t,0),total:num(o.total,
 const normB=o=>{o=o&&typeof o==='object'?o:{};const b=Object.assign(cl(BDEF),{t:num(o.t,0)});
  ['cIni','dIni','vIni','vAmt','amtA','amtB','sm','goal'].forEach(k=>{b[k]=num(o[k],BDEF[k])});
  b.dayA=int(o.dayA,1,31,BDEF.dayA);b.dayB=int(o.dayB,1,31,BDEF.dayB);
- ['lq1','lq2'].forEach(k=>{if(o[k]!=null&&o[k]!=='')b[k]=num(o[k],null)});
+ // Frecuencia del ingreso (s semanal, q quincenal, m mensual) y periodo del límite de gasto (q quincenal, m mensual).
+ // Nada se descuenta solo: el límite es el ingreso del periodo, salvo que el usuario escriba otro (lim).
+ b.freq=/^[sqm]$/.test(o.freq)?o.freq:'q';b.limP=/^[qm]$/.test(o.limP)?o.limP:'q';
+ b.incW=num(o.incW,0);b.amtM=num(o.amtM,0);b.wday=int(o.wday,0,6,5);b.dayM=int(o.dayM,1,31,1);
+ b.lim=o.lim!=null&&o.lim!==''&&isFinite(parseFloat(o.lim))?num(o.lim,null):null;
  ['cDate','dDate','vDate','gs'].forEach(k=>{b[k]=sdt(o[k],BDEF[k])});
  const met=m=>/^[cdev]$/.test(m)?m:'c';
  b.exp=arr(o.exp).map(x=>({n:str(x.n),a:num(x.a,0),d:sdt(x.d),m:met(x.m),c:str(x.c,40)||'Otro'}));
@@ -82,9 +86,23 @@ const addM=(s,n)=>{const [y,m,d]=s.split('-').map(Number);return mkD(y,m-1+n,d)}
 const mens=D=>D.mo>0?D.mo:r2(D.total/D.months),dsBase=(D,k)=>k<D.months?mens(D):Math.max(0,r2(D.total-(D.months-1)*mens(D)));
 const debtEff=D=>adjPlan(D.pay.map((_,k)=>dsBase(D,k+1)),D.pay),ds=(D,k)=>debtEff(D)[k-1]||0;
 const dpaid=D=>D.pay.reduce((t,p)=>t+(+p.a||0),0),ddone=D=>dpaid(D)>=D.total-0.005;
-function curPeriod(dt){const t=dt||today(),[y,m]=t.split('-').map(Number),L=[];
- for(const o of [-1,0,1]){L.push({s:mkD(y,m-1+o,16),k:'A'});L.push({s:mkD(y,m-1+o,B.dayB),k:'B'})}
+// Ingreso del mes según la frecuencia (una semana = 52/12 por mes)
+const ingresoMes=()=>B.freq==='s'?r2((+B.incW||0)*52/12):B.freq==='m'?(+B.amtM||0):r2((+B.amtA||0)+(+B.amtB||0));
+// Periodo del límite. Quincenal: si cobras por quincena, del día siguiente al primer depósito y desde el segundo
+// depósito (como siempre: 16–29 y 30–15); si no, del 1 al 15 y del 16 a fin de mes. Mensual: desde el día de pago
+// (si cobras por mes) o desde el día 1. forceQ: siempre por quincena (para Estadísticas).
+function curPeriod(dt,forceQ){const t=dt||today(),[y,m]=t.split('-').map(Number),L=[];
+ for(const o of [-1,0,1]){
+  if(B.limP==='m'&&!forceQ)L.push({s:mkD(y,m-1+o,B.freq==='m'?(+B.dayM||1):1),k:'M'});
+  else if(B.freq==='q'){L.push({s:mkD(y,m-1+o,Math.min(31,(+B.dayA||15)+1)),k:'A'});L.push({s:mkD(y,m-1+o,+B.dayB||30),k:'B'})}
+  else{L.push({s:mkD(y,m-1+o,1),k:'B'});L.push({s:mkD(y,m-1+o,16),k:'A'})}}
  L.sort((a,b)=>a.s<b.s?-1:a.s>b.s?1:0);let i=0;while(i+1<L.length&&L[i+1].s<=t)i++;return{cur:L[i],next:L[i+1]}}
+// Límite de gasto del periodo k: el que escribió el usuario o, si no, su ingreso de ese periodo (sin descuentos)
+function limite(k){if(B.lim!=null)return +B.lim;const im=ingresoMes();if(B.limP==='m')return im;
+ if(B.freq==='q')return k==='A'?(+B.amtA||0):(+B.amtB||0);return r2(im/2)}
+// Lo que suman los límites en un mes
+const limiteMes=()=>B.limP==='m'?limite('M'):r2(limite('A')+limite('B'));
+const nomPer=()=>B.limP==='m'?'mes':'quincena';
 const loanDone=()=>S.pay.every((p,i)=>status(i)==='Pagado');
 function stmHtml(){
  const t=today(),L=B.stm.slice().sort((a,b)=>(a.l||'9').localeCompare(b.l||'9')),pend=B.stm.filter(x=>!x.pd).reduce((s,x)=>s+(+x.sal||0),0);
@@ -213,7 +231,7 @@ function statsHtml(){const t=today(),cm=t.slice(0,7),z=()=>({c:0,d:0,e:0,v:0}),K
  const cats=Object.entries(byC).sort((a,b)=>(CATS.indexOf(a[0])+99)%99-(CATS.indexOf(b[0])+99)%99);
  const pm={};all.forEach(x=>{const k=x.d.slice(0,7);(pm[k]=pm[k]||z())[x.m]+=x.a});
  const mk=Object.keys(pm).sort().slice(-6);
- const pq={};all.forEach(x=>{const k=curPeriod(x.d).cur.s;(pq[k]=pq[k]||z())[x.m]+=x.a});
+ const pq={};all.forEach(x=>{const k=curPeriod(x.d,true).cur.s;(pq[k]=pq[k]||z())[x.m]+=x.a});
  const qk=Object.keys(pq).sort().slice(-6);
  const tt=o=>K.reduce((s,k)=>s+o[k],0);
  const mItems=o=>K.map(k=>({l:METH[k],v:o[k],c:MC[k]}));
@@ -247,7 +265,7 @@ function incEditRow(o){const x=o.x;return `<div class="card" style="margin:8px 0
   <div class="fl"><span>Recibido en</span><select id="xim" class="sel">${['e','d'].filter(k=>useM(k)||x.m===k).map(k=>`<option value="${k}"${x.m===k?' selected':''}>${METH[k]}</option>`).join('')}</select></div>
   </div><div class="row" style="margin-top:12px"><button class="btn f" data-act="isave" data-i="${o.i}">Guardar cambios</button><button class="btn" data-act="icancel">Cancelar</button><button class="btn del" data-act="idel" data-i="${o.i}">Eliminar ingreso</button></div></div>`}
 function ap(id,val,o){o=o||{};
- const ch=(o.chips||[]).map(q=>`<button type="button" class="chip" data-aq="${id}" data-v="${q}">${M(q).replace(/\.00$/,'')}</button>`).join('')+(o.clr?`<button type="button" class="chip" data-clr="${o.key}">Automático</button>`:'');
+ const ch=(o.chips||[]).map(q=>`<button type="button" class="chip" data-aq="${id}" data-v="${q}">${M(q).replace(/\.00$/,'')}</button>`).join('')+(o.clr?`<button type="button" class="chip" data-clr="${o.key}">${o.key==='lim'?'Igual a mi ingreso':'Automático'}</button>`:'');
  return `<div class="ap"><div class="apr"><input id="${id}" class="apn" type="number" inputmode="decimal" step="0.01" min="0" placeholder="${o.ph||'0'}" value="${esc(val==null?'':val)}"${o.key?` data-b="${o.key}"`:''}></div>${ch?`<div class="chips">${ch}</div>`:''}</div>`}
 function decorate(){const app=$('#app');
 
@@ -437,31 +455,38 @@ function render(){pendR=false;
  else if(tab==='loan'){
 h+=loansHtml();
  }else if(tab==='stats'){h+=moreSeg()+statsHtml()}else if(tab==='coach'){h+=moreSeg()+coachHtml()}else if(tab==='acct'){const a=accountHtml(),i=a.indexOf('<!--c1-->');h+=moreSeg()+a.slice(0,i)+appearanceHtml()+(can()?methodsCard()+atajoCard():'')+a.slice(i);if(!me)loadMe()}else{
-  const t=today(),ym=t.slice(0,7),ld=loanDone(),dsum=r2(B.debts.filter(D=>!ddone(D)).reduce((s,D)=>s+mens(D),0)),lp=r2((ld?0:S.monthly)+dsum),dl=ld?'compras a meses':dsum>0?'el préstamo y compras a meses':'el préstamo';
-  const P=curPeriod(),bB=r2(B.amtB-lp),bA=r2(B.amtA-B.sm),bud=k=>k==='A'?(B.lq2!=null?+B.lq2:bA):(B.lq1!=null?+B.lq1:bB),gastosM=r2(bud('A')+bud('B')),pre=t<B.gs,budC=pre?0:r2(bud(P.cur.k)+qExtra(P)),budN=pre?bud(curPeriod(B.gs).cur.k):bud(P.next.k);
+  const t=today(),ym=t.slice(0,7);
+  const P=curPeriod(),pre=t<B.gs,budC=pre?0:r2(limite(P.cur.k)+qExtra(P)),budN=pre?limite(curPeriod(B.gs).cur.k):limite(P.next.k);
   const inP=e=>{const d=e.d||t;return d>=P.cur.s&&d<P.next.s};
   const mex=B.exp.map((e,i)=>({e,i})).filter(x=>inP(x.e)&&(!x.e.m||x.e.m==='c'||x.e.m==='d')),ex=mex.reduce((s,x)=>s+x.e.a,0),left=r2(budC-ex),pg=budC>0?Math.max(0,Math.min(100,left/budC*100)):0;
   const col=pre?'var(--mut)':left<0||pg<20?'var(--bad)':pg<50?'var(--warn)':'var(--ok)';
   const [ey,em,edd]=P.next.s.split('-').map(Number),endS=(x=>x.getFullYear()+'-'+pad(x.getMonth()+1)+'-'+pad(x.getDate()))(new Date(ey,em-1,edd-1));
   const sv=B.sav.reduce((s,e)=>s+e.a,0),svM=B.sav.filter(e=>e.d&&e.d.slice(0,7)===ym).reduce((s,e)=>s+e.a,0),pa=B.sm>0?Math.min(100,svM/B.sm*100):0;
-  const incomeM=r2(+B.amtA+ +B.amtB),neg=bA<0||bB<0;
+  const incomeM=ingresoMes(),limM=limiteMes(),pasa=limM>incomeM+0.005&&incomeM>0,np=nomPer();
+  const seg=(act,cur,opts)=>`<div class="seg" role="group">${opts.map(([v,l])=>`<button type="button" class="${cur===v?'on':''}" aria-pressed="${cur===v}" data-act="${act}" data-v="${v}">${l}</button>`).join('')}</div>`;
+  const DIAS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const dia=(key,label)=>`<div class="fl"><span>${label}</span><input type="number" inputmode="numeric" min="1" max="31" step="1" data-b="${key}" value="${esc(B[key])}"></div>`;
+  const ingreso=B.freq==='s'?`<div class="fl"><span>Ingreso semanal</span>${ap('incW',B.incW,{key:'incW'})}</div>
+    <div class="fl"><span>Día de pago</span><select class="sel" data-b="wday">${DIAS.map((d,k)=>`<option value="${k}"${+B.wday===k?' selected':''}>${d}</option>`).join('')}</select></div>`
+   :B.freq==='m'?`<div class="fl"><span>Ingreso mensual</span>${ap('amtM',B.amtM,{key:'amtM'})}</div>${dia('dayM','Día de pago')}`
+   :`<div class="fl"><span>Primer depósito</span>${ap('amtA',B.amtA,{key:'amtA'})}</div>${dia('dayA','Día del primer depósito')}
+    <div class="fl"><span>Segundo depósito</span>${ap('amtB',B.amtB,{key:'amtB'})}</div>${dia('dayB','Día del segundo depósito')}`;
   h+=`<div class="card"><h3 style="margin:0 0 8px">Plan del mes</h3>
-  <div class="row pg"><div class="fl"><span>Depósito día ${B.dayA}</span>${ap('amtA',B.amtA,{st:100,key:'amtA'})}</div>
-  <div class="fl"><span>Depósito día ${B.dayB}</span>${ap('amtB',B.amtB,{st:100,key:'amtB'})}</div>
-  <div class="fl"><span>Ahorro mensual</span>${ap('sm',B.sm,{st:100,key:'sm'})}</div>
-  <div class="fl"><span>Límite 1 al 15 ${B.lq1==null?'<small>(automático)</small>':'<small>(manual)</small>'}</span>${ap('lq1',bud('B'),{st:100,key:'lq1',chips:[1500,2000,3000],clr:1})}</div>
-  <div class="fl"><span>Límite 16 al fin de mes ${B.lq2==null?'<small>(automático)</small>':'<small>(manual)</small>'}</span>${ap('lq2',bud('A'),{st:100,key:'lq2',chips:[1500,2000,3000],clr:1})}</div>
-  <div class="fl"><span>Inicio del control de gastos</span><input class="apn ro" type="date" data-b="gs" value="${esc(B.gs)}"></div>
-  <div class="fl"><span>${ld?'Compras a meses':dsum>0?'Préstamo + compras':'Préstamo'}</span><p class="rov">${M(lp)}</p></div>
-  <div class="fl"><span>Gastos del mes</span><p class="rov">${M(gastosM)}</p></div></div>
-  <p class="note" style="margin:0;color:${neg?'var(--bad)':'var(--mut)'}">Ingreso del mes ${M(incomeM)}. Del depósito del día ${B.dayB} se descuenta ${dl} (${M(lp)}) y del día ${B.dayA} el ahorro (${M(B.sm)}). Gastos del 30 al 15: ${M(bud('B'))}. Gastos del 16 al 29: ${M(bud('A'))}. Total del mes: ${M(gastosM)}.${neg?' ¡Ojo: el depósito no alcanza!':''}</p></div>
+  <div class="fl"><span>¿Cada cuánto recibes tu ingreso?</span>${seg('pfreq',B.freq,[['s','Semanal'],['q','Quincenal'],['m','Mensual']])}</div>
+  <div class="row pg" style="margin-top:12px">${ingreso}</div>
+  <div class="fl" style="margin-top:14px"><span>¿Tu límite de gasto es por quincena o por mes?</span>${seg('plimp',B.limP,[['q','Quincenal'],['m','Mensual']])}</div>
+  <div class="row pg" style="margin-top:12px">
+   <div class="fl"><span>Límite por ${np} ${B.lim==null?'<small>(igual a tu ingreso)</small>':'<small>(lo elegiste tú)</small>'}</span>${ap('lim',B.lim==null?limite(P.cur.k):B.lim,{key:'lim',clr:1})}</div>
+   <div class="fl"><span>Meta de ahorro mensual <small>(solo seguimiento)</small></span>${ap('sm',B.sm,{key:'sm'})}</div>
+   <div class="fl"><span>Inicio del control de gastos</span><input class="apn ro" type="date" data-b="gs" value="${esc(B.gs)}"></div></div>
+  <p class="note" style="margin:0;color:${pasa?'var(--bad)':'var(--mut)'}">Ingreso del mes: ${M(incomeM)}. Puedes gastar ${B.limP==='m'?M(limM)+' al mes':(B.lim==null&&B.freq==='q'?M(limite('B'))+' del día '+B.dayB+' al '+B.dayA+' y '+M(limite('A'))+' del '+(+B.dayA+1)+' al '+((+B.dayB||30)-1):M(limite('A'))+' por quincena')+' ('+M(limM)+' al mes)'}. Nada se descuenta solo: si quieres apartar para deudas o ahorro, baja tu límite.${pasa?' ¡Ojo: tus límites suman más que tu ingreso!':''}</p></div>
   ${useM('v')?saldoCard('v'):''}${useM('e')?saldoCard('e'):''}`;
-  const qh0=h.length;h+=`<div class="card" style="margin-top:12px"><h3 style="margin:0 0 2px">Gastos de la quincena</h3>
-  <p class="note" style="margin:0 0 8px">${pre?'El control de gastos inicia el '+fmtD(B.gs)+'. Mientras tanto el límite es $0.':'Quincena del '+(P.cur.k==='A'?'16 al 29':'30 al 15')+': '+fmtD(P.cur.s)+' al '+fmtD(endS)+'. Sale del depósito del día '+(P.cur.k==='A'?B.dayA+' menos el ahorro':B.dayB+' menos '+dl)+'.'}</p>
+  const qh0=h.length;h+=`<div class="card" style="margin-top:12px"><h3 style="margin:0 0 2px">Gastos ${B.limP==='m'?'del mes':'de la quincena'}</h3>
+  <p class="note" style="margin:0 0 8px">${pre?'El control de gastos inicia el '+fmtD(B.gs)+'. Mientras tanto el límite es $0.':'Del '+fmtD(P.cur.s)+' al '+fmtD(endS)+'.'}</p>
   <b class="big" style="font-size:1.75rem;color:${col}">${M(left)}</b> <span class="note">disponibles de ${M(budC)}${qExtra(P)>0&&!pre?' (incluye '+M(qExtra(P))+' de ingresos en débito)':''}</span>
   <div class="bar" style="height:20px"><i style="width:${pg}%;background:${col}"></i></div>
   <p class="note" style="margin:0 0 8px">${left<0?'Te pasaste '+M(-left)+' del presupuesto.':'Llevas gastados '+M(ex)+'.'} ${pre?'El '+fmtD(B.gs)+' inicia con ':'El '+fmtD(P.next.s)+' se actualiza con '}${M(budN)}.</p>`;
-  if(!mex.length)h+=`<p class="note">Aún no hay gastos en esta quincena.</p>`;
+  if(!mex.length)h+=`<p class="note">Aún no hay gastos en ${B.limP==='m'?'este mes':'esta quincena'}.</p>`;
   mex.forEach(x=>{if(editE===x.i){h+=editRow(x);return}h+=`<div class="ex"><span>${fmtD(x.e.d||t)} ${esc(x.e.n)}${' <small class="tg'+(x.e.m==='v'?' v':'')+'">'+METH[x.e.m||'c']+'</small>'}${x.e.c?' <small class="tg">'+esc(x.e.c)+'</small>':''}</span><span>${M(x.e.a)} <button class="btn" data-act="eedit" data-i="${x.i}">Editar</button> <button class="btn" data-act="del" data-i="${x.i}">Quitar</button></span></div>`});
   h+=`<p class="note" style="margin-top:10px">Registra gastos e ingresos desde <button type="button" class="linkb" data-tab="home">Inicio</button>.</p></div>`;
   if(!QM().length)h=h.slice(0,qh0);
@@ -499,6 +524,8 @@ document.addEventListener('click',e=>{
  if(a==='onbm'){const k=t.dataset.v;onbSel.has(k)?onbSel.delete(k):onbSel.add(k);render();return}
  if(a==='onbok'){if(!onbSel.size)return;B.methods=MOPT.map(o=>o.k).filter(x=>onbSel.has(x));B.onb='';animTab='first';tab='home';saveB();return}
  if(a==='mtog'){toggleMethod(t.dataset.v);return}
+ if(a==='pfreq'){B.freq=t.dataset.v;saveB();return}
+ if(a==='plimp'){B.limP=t.dataset.v;saveB();return}
  if(a==='hkind'){HD.kind=t.dataset.v;render();const q=$('#ha');if(q)q.focus();return}
  if(a==='hm'){if(curKind()==='g'){lastM=t.dataset.v;try{localStorage.setItem('lastm',lastM)}catch(x){}}else lastMi=t.dataset.v;render();return}
  if(a==='atact'){if(AT.st)pedirConfirmacion('Se creará una llave nueva y la anterior dejará de funcionar. ¿Continuar?','Crear llave nueva',false).then(ok=>{if(ok)activateAtajo()});else activateAtajo();return}
@@ -578,7 +605,7 @@ document.addEventListener('change',e=>{
  if(t.id==='uiacc'||t.id==='uiacc2'){setUI({[t.id==='uiacc'?'acc':'acc2']:t.value},true);return}
  if(t.id==='impf'){if(t.files&&t.files[0])importData(t.files[0]);t.value='';return}
  if(t.dataset.s){let w=v;if(t.dataset.s==='start'&&String(w).length===7)w+='-01';if(t.dataset.s==='day')w=Math.max(1,Math.min(31,Math.round(v)||30));S[t.dataset.s]=w;saveL(true)}
- else if(t.dataset.b){B[t.dataset.b]=(/^lq/.test(t.dataset.b)&&t.value==='')?null:v;saveB(true)}
+ else if(t.dataset.b){const k=t.dataset.b;let w=(/^(lq|lim$)/.test(k)&&t.value==='')?null:v;if(/^(dayA|dayB|dayM)$/.test(k)&&w!=null)w=Math.max(1,Math.min(31,Math.round(+w)||1));if(k==='wday')w=+t.value;B[k]=w;saveB(true)}
  else if(t.dataset.df==='mo'){const D=B.debts.find(x=>x.id===t.dataset.d),mo=parseFloat(t.value);if(D&&mo>0){const lp=D.pay.reduce((r,x,k)=>(+x.a>0?k+1:r),0);D.mo=mo;D.months=Math.max(Math.ceil(D.total/mo-1e-9),lp,1);D.pay=D.pay.slice(0,D.months);while(D.pay.length<D.months)D.pay.push({a:0,d:'',n:''});saveB(true)}}
  else if(t.dataset.df){const D=B.debts.find(x=>x.id===t.dataset.d),p=D&&D.pay[+t.dataset.i];if(p){p[t.dataset.df]=t.dataset.df==='a'?(parseFloat(t.value)||0):t.value;saveB(true)}}
  else if(t.dataset.f){const p=S.pay[+t.dataset.i];p[t.dataset.f]=t.dataset.f==='a'?(parseFloat(t.value)||0):t.value;saveL(true)}
@@ -617,8 +644,8 @@ const curKind=()=>HD.kind==='i'&&IM().length?'i':'g';
 function curM(){const L=curKind()==='g'?GM():IM(),m=curKind()==='g'?lastM:lastMi;return L.includes(m)?m:L[0]}
 // Ingresos en débito dentro de la quincena: suman a lo que puedes gastar (los gastos con débito salen de ese límite)
 function qExtra(P){const t=today();return r2((B.inc||[]).filter(x=>x.m==='d'&&(x.d||t)>=P.cur.s&&(x.d||t)<P.next.s).reduce((s,x)=>s+(+x.a||0),0))}
-function quincena(){const t=today(),ld=loanDone(),dsum=r2(B.debts.filter(D=>!ddone(D)).reduce((s,D)=>s+mens(D),0)),lp=r2((ld?0:S.monthly)+dsum);
- const P=curPeriod(),bB=r2(B.amtB-lp),bA=r2(B.amtA-B.sm),bud=k=>k==='A'?(B.lq2!=null?+B.lq2:bA):(B.lq1!=null?+B.lq1:bB),pre=t<B.gs,extra=pre?0:qExtra(P),budC=pre?0:r2(bud(P.cur.k)+extra);
+function quincena(){const t=today();
+ const P=curPeriod(),pre=t<B.gs,extra=pre?0:qExtra(P),budC=pre?0:r2(limite(P.cur.k)+extra);
  const ex=r2(B.exp.filter(e=>{const d=e.d||t;return d>=P.cur.s&&d<P.next.s&&(!e.m||e.m==='c'||e.m==='d')}).reduce((s,e)=>s+(+e.a||0),0)),left=r2(budC-ex),pg=budC>0?Math.max(0,Math.min(100,left/budC*100)):0;
  return{pre,extra,budC,ex,left,pg,col:pre?'var(--mut)':left<0||pg<20?'var(--bad)':pg<50?'var(--warn)':'var(--ok)'}}
 function accTot(k){const info=accInfo(k),ini=+B[{v:'vIni',e:'cIni',d:'dIni'}[k]]||0;return{bal:info.bal,total:k==='v'?r2(ini+(info.cnt||0)*(+B.vAmt||0)):r2(ini+(info.inc||0))}}
@@ -631,7 +658,7 @@ function homeHtml(){const k=curKind(),L=k==='g'?GM():IM(),m=curM(),q=quincena(),
   ${chips}
   <div class="hrow"><input id="hc" name="concepto" maxlength="120" placeholder="${k==='g'?'¿En qué? (opcional)':'¿De quién? (opcional)'}" aria-label="Concepto" value="${esc(HD.con)}"><button type="submit" class="btn f">Guardar</button></div>
   <div class="hmeta">${k==='g'?`<label>Categoría <select id="hcat" name="categoria">${CATS.map(c=>`<option${c===lastC?' selected':''}>${c}</option>`).join('')}</select></label>`:''}<label>Fecha <input id="hdate" name="fecha" type="date" value="${esc(HD.d||t)}"></label></div></form>`;
- if(QM().length)h+=`<section class="hq"><p class="hk">Puedes gastar esta quincena <small>(crédito y débito)</small></p>
+ if(QM().length)h+=`<section class="hq"><p class="hk">Puedes gastar ${B.limP==='m'?'este mes':'esta quincena'} <small>(crédito y débito)</small></p>
   <p class="hbig" style="color:${q.col}">${M(q.left)}</p><div class="bar"><i style="width:${q.pg}%;background:${q.col}"></i></div>
   <p class="note">${q.pre?'El control de gastos inicia el '+fmtD(B.gs)+'.':(q.left<0?'Te pasaste '+M(-q.left)+'. ':'')+'De '+M(q.budC)+', llevas '+M(q.ex)+(q.extra>0?'. Incluye '+M(q.extra)+' de ingresos en débito.':'.')}</p></section>`;
  const tiles=['v','e'].filter(useM).map(x=>{const a=accTot(x),pct=a.total>0?Math.max(0,Math.min(100,a.bal/a.total*100)):0;
@@ -756,15 +783,15 @@ const dDiff=(a,b)=>Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/
 const pctTxt=x=>Math.round(x*100)+'%';
 function coachData(){const t=today(),ym=t.slice(0,7),[yy,mm]=ym.split('-').map(Number),pm=mkD(yy,mm-2,1).slice(0,7);
  const ld=loanDone(),openD=B.debts.filter(D=>!ddone(D)),dsum=r2(openD.reduce((s,D)=>s+mens(D),0)),lp=r2((ld?0:+S.monthly||0)+dsum);
- const P=curPeriod(),bB=r2(B.amtB-lp),bA=r2(B.amtA-B.sm),bud=k=>k==='A'?(B.lq2!=null?+B.lq2:bA):(B.lq1!=null?+B.lq1:bB),pre=t<B.gs,budC=pre?0:r2(bud(P.cur.k)+qExtra(P));
+ const P=curPeriod(),pre=t<B.gs,budC=pre?0:r2(limite(P.cur.k)+qExtra(P));
  const inP=e=>{const d=e.d||t;return d>=P.cur.s&&d<P.next.s};
  const ex=r2(B.exp.filter(e=>inP(e)&&(!e.m||e.m==='c'||e.m==='d')).reduce((s,e)=>s+(+e.a||0),0));
  const perLen=Math.max(1,dDiff(P.cur.s,P.next.s)),elapsed=Math.min(perLen,Math.max(1,dDiff(P.cur.s,t)+1)),proj=r2(ex/elapsed*perLen);
  const mes=B.exp.filter(e=>(e.d||t).slice(0,7)===ym),prev=B.exp.filter(e=>(e.d||'').slice(0,7)===pm);
  const byCat=a=>a.reduce((o,e)=>{const c=e.c||'Otro';o[c]=r2((o[c]||0)+(+e.a||0));return o},{});
  const sv=r2(B.sav.reduce((s,e)=>s+(+e.a||0),0)),svM=r2(B.sav.filter(e=>(e.d||'').slice(0,7)===ym).reduce((s,e)=>s+(+e.a||0),0));
- const income=r2(+B.amtA+ +B.amtB),gastosM=r2(bud('A')+bud('B'));
- return{t,ym,ld,openD,dsum,lp,P,pre,budC,ex,perLen,elapsed,proj,mes,prev,cat:byCat(mes),catPrev:byCat(prev),sv,svM,income,gastosM,neg:bA<0||bB<0}}
+ const income=ingresoMes(),gastosM=limiteMes();
+ return{t,ym,ld,openD,dsum,lp,P,pre,budC,ex,perLen,elapsed,proj,mes,prev,cat:byCat(mes),catPrev:byCat(prev),sv,svM,income,gastosM,neg:income>0&&gastosM>income+0.005}}
 function coachTips(c){const T=[],add=(lvl,title,text,act)=>T.push({lvl,title,text,act});
  const loanIt=planItemsLoan(),late=loanIt.filter(x=>x.st==='Atrasado'),nx=loanIt.findIndex(x=>x.st!=='Pagado');
  // Préstamo
@@ -781,7 +808,7 @@ function coachTips(c){const T=[],add=(lvl,title,text,act)=>T.push({lvl,title,tex
   if(r>.4)add('alerta','Tus deudas se llevan mucho de tu ingreso',`Pagas ${M(c.lp)} al mes en deudas, el ${pctTxt(r)} de lo que recibes. Lo sano es menos del 30%. Evita nuevas compras a meses hasta liquidar alguna.`,'loan');
   else if(r>.3)add('aviso','Cuidado con nuevas deudas',`Tus pagos de deudas son el ${pctTxt(r)} de tu ingreso (${M(c.lp)} de ${M(c.income)}). Antes de otra compra a meses, termina una.`,'loan');
   else add('bien','Tus deudas están bajo control',`Pagas el ${pctTxt(r)} de tu ingreso en deudas, por debajo del 30% recomendado.`,null)}
- if(c.neg)add('alerta','Tu plan del mes no cuadra','Uno de tus depósitos no alcanza para lo que le asignaste (préstamo, compras o ahorro). Ajusta montos en Presupuesto.','bud');
+ if(c.neg)add('alerta','Tus límites suman más que tu ingreso',`Puedes gastar ${M(c.gastosM)} al mes pero recibes ${M(c.income)}. Baja tu límite en Presupuesto, Plan del mes.`,'bud');
  // Quincena
  if(!c.pre&&c.budC>0){const left=r2(c.budC-c.ex);
   if(left<0)add('alerta','Ya te pasaste del límite de la quincena',`Llevas ${M(c.ex)} de ${M(c.budC)}: ${M(-left)} de más. Lo que queda de la quincena, intenta solo gastos indispensables.`,'bud');
@@ -795,7 +822,7 @@ function coachTips(c){const T=[],add=(lvl,title,text,act)=>T.push({lvl,title,tex
  // Ahorro
  if(B.sm>0){const day=+c.t.slice(8,10),r=c.svM/B.sm;
   if(r>=1)add('bien','Cumpliste tu ahorro del mes',`Ahorraste ${M(c.svM)} de ${M(B.sm)}. Lo que ahorres de más acelera tu meta.`,'bud');
-  else if(day>=16&&r<.5)add('aviso','Tu ahorro del mes va atrasado',`Llevas ${M(c.svM)} de ${M(B.sm)}. Apártalo en cuanto llegue tu depósito del día ${B.dayA}, antes de gastar.`,'bud')}
+  else if(day>=16&&r<.5)add('aviso','Tu ahorro del mes va atrasado',`Llevas ${M(c.svM)} de ${M(B.sm)}. Apártalo en cuanto te paguen, antes de gastar.`,'bud')}
  else add('idea','Ponte una meta de ahorro mensual','Aunque sea poco: apartarlo en cuanto te pagan funciona mejor que ahorrar lo que sobre. Puedes definirla en Presupuesto, Plan del mes.','bud');
  if(B.goal>0&&c.sv<B.goal){const avg=Math.max(B.sm,c.svM);if(avg>0){const m=Math.ceil((B.goal-c.sv)/avg);add('idea','Tu meta de ahorro',`Te faltan ${M(B.goal-c.sv)} para tu meta de ${M(B.goal)}. Ahorrando ${M(avg)} al mes, la alcanzas en unos ${m} ${m===1?'mes':'meses'}.`,'bud')}}
  // Fondo de emergencia
