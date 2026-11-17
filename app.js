@@ -1,7 +1,7 @@
 // Mis finanzas — lógica de la app
 // Valores iniciales: todas las cuentas nuevas empiezan vacías (las cifras personales viven solo en la nube)
 // Versión de la app. Al publicar cambios, súbela aquí, en version.json y en los ?v= de index.html
-const APPV=66;
+const APPV=67;
 const DEF={total:0,monthly:0,day:30,start:'2026-11-30',pay:[]};
 const BDEF={cIni:0,cDate:'2026-11-02',dIni:0,dDate:'2026-11-02',vIni:0,vDate:'2026-11-02',vAmt:0,gs:'2026-10-30',dayA:15,amtA:0,dayB:30,amtB:0,sm:0,exp:[],sav:[],goal:0,debts:[],stm:[]};
 const isRafa=()=>!!ses&&ses.user==='rafa';
@@ -110,7 +110,7 @@ function debtCard(D){let h='';
   <td class="st ${s}">${s}</td>
   <td>${(+p.a)>0?`<button class="btn" data-act="dundo" data-d="${D.id}" data-i="${k}">Deshacer</button>`:`<button class="btn f" data-act="dmark" data-d="${D.id}" data-i="${k}">Marcar pagado</button>`}${p.n||noteOpen.has(D.id+':'+k)?'':` <button type="button" class="linkb addn" data-act="note" data-k="${D.id}:${k}" aria-label="Agregar nota al pago ${k+1}">+ Nota</button>`}</td></tr>
   ${p.n||noteOpen.has(D.id+':'+k)?`<tr><td></td><td colspan="6"><input class="w" placeholder="Nota o referencia…" data-df="n" data-d="${D.id}" data-i="${k}" value="${esc(p.n||'')}"></td></tr>`:''}`});
-  h+=`</table>${winBtn('t:'+D.id,DI.length,win)}</div><div class="row" style="margin-top:10px">${cfm===D.id?`<span class="note" style="margin:0">¿Eliminar esta compra y sus pagos?</span><button class="btn f" data-act="ddely" data-d="${D.id}">Sí, eliminar</button><button class="btn" data-act="ddeln">Cancelar</button>`:`<button class="btn" data-act="ddel" data-d="${D.id}">Eliminar compra</button>`}</div></div>`;
+  h+=`</table>${winBtn('t:'+D.id,DI.length,win)}</div><div class="row" style="margin-top:10px">${cfm===D.id?`<span class="note" style="margin:0">¿Eliminar esta deuda y sus pagos?</span><button class="btn del" data-act="ddely" data-d="${D.id}">Sí, eliminar</button><button class="btn" data-act="ddeln">Cancelar</button>`:`<button class="btn del" data-act="ddel" data-d="${D.id}">Eliminar deuda</button>`}</div></div>`;
  return h}
 function debtForm(){return `<div class="card" style="margin-top:12px"><h3 style="margin:0 0 8px">Nueva deuda</h3><div class="row"><input id="dn" placeholder="Nombre (ej. Celular)"><div class="fl"><span>Monto de la compra</span>${ap('dp','',{st:500,ph:'0'})}</div><label>Total a pagar<input id="dt" type="number" step="0.01" placeholder="igual al monto"></label><label>Meses<input id="dmo" type="number" min="1" max="60" step="1"></label><label>Mensualidad (opcional)<input id="dmn" type="number" step="0.01" placeholder="se calcula sola"></label><label>Primer pago<input id="dd" type="date" value="${esc(nx30())}"></label></div><div class="row"><button class="btn f" data-act="dadd">Crear deuda</button><button class="btn" data-act="dcancel">Cancelar</button></div></div>`}
 function foldHtml(id,title,sum,inner,def){return `<details class="fold" data-fid="${esc(id)}" ${(openF[id]===undefined?def:openF[id])?'open':''}><summary><span class="ft">${title}</span><span class="fs">${sum}</span></summary><div class="fb">${inner}</div></details>`}
@@ -140,6 +140,8 @@ function loanBody(){
   <div class="card" style="margin-top:12px"><h3 style="margin:0 0 4px">Resumen para compartir</h3><p class="note" style="margin:0 0 8px">Copia este resumen y mándalo por WhatsApp o correo.</p>
   <textarea id="sumt" readonly rows="9">${esc(sumText())}</textarea>
   <div class="row" style="margin-top:8px"><button class="btn f" data-act="copysum">Copiar resumen</button><a class="btn" href="https://wa.me/?text=${encodeURIComponent(sumText())}" target="_blank" rel="noopener">Enviar por WhatsApp</a></div></div>`;
+ // Solo el dueño puede eliminar el préstamo (un invitado puede editarlo, no borrarlo)
+ if(can()&&+S.total>0)h+=`<div class="row" style="margin-top:12px">${cfm==='loan'?`<span class="note" style="margin:0">¿Eliminar el préstamo y todos sus pagos?</span><button class="btn del" data-act="ldely">Sí, eliminar</button><button class="btn" data-act="ddeln">Cancelar</button>`:`<button class="btn del" data-act="ldel">Eliminar préstamo</button>`}</div>`;
  return h}
 function loansHtml(){
  const paid=S.pay.reduce((t,p)=>t+(+p.a||0),0),rest=r2(S.total-paid),LI=planItemsLoan(),nOk=LI.filter(x=>x.st==='Pagado').length;
@@ -527,8 +529,12 @@ document.addEventListener('click',e=>{
   if(a==='dmark'){D.pay[i]={a:ds(D,i+1),d:today(),n:D.pay[i].n};saveB();toast(D.n+': pago '+(i+1)+' marcado como pagado')}
   else if(a==='dundo'){D.pay[i]={a:0,d:'',n:D.pay[i].n};saveB()}
   else if(a==='ddel'){cfm=D.id;render()}
-  else if(a==='ddely'){if(SH['debt:'+D.id])stopShare('debt:'+D.id);B.debts=B.debts.filter(x=>x!==D);cfm='';saveB()}}
+  else if(a==='ddely'){const k=B.debts.indexOf(D);if(SH['debt:'+D.id])stopShare('debt:'+D.id);B.debts=B.debts.filter(x=>x!==D);cfm='';saveB();
+   toast('Deuda "'+D.n+'" eliminada',()=>{const N=B.debts.slice();N.splice(Math.min(k,N.length),0,D);B.debts=N;saveB();toast('Deuda restaurada')})}}
  else if(a==='ddeln'){cfm='';render()}
+ else if(a==='ldel'&&can()){cfm='loan';render()}
+ else if(a==='ldely'&&can()){const prev=cl(loanObj());if(SH.loan)stopShare('loan');normS({total:0,monthly:0,day:S.day,start:nx30(),pay:[]});cfm='';saveL();
+  toast('Préstamo eliminado',()=>{normS(prev);saveL();toast('Préstamo restaurado')})}
  else if(a==='sadd'){const n=$('#sn').value.trim(),m=parseFloat($('#sa').value);if(m>0){B.sav.push({n,a:m,d:today()});saveB()}}
 });
 document.addEventListener('input',e=>{const t=e.target;if(t.id==='uiacc'||t.id==='uiacc2'){UI=normUI(Object.assign({},UI,{[t.id==='uiacc'?'acc':'acc2']:t.value}));applyUI()}});
