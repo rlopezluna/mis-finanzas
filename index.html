@@ -13,7 +13,7 @@
 <meta name="referrer" content="no-referrer">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<script src="config.js?v=69"></script>
+<script src="config.js?v=70"></script>
 <style>
 /* ===== Paleta: crema, café, verde olivo y vino ===== */
 :root{
@@ -278,6 +278,16 @@ input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px var(--acc-soft),var
 #app.first .s-Pagado .sc{animation-name:stampInPaid}
 .stamp.just .sc{animation:stampPress 260ms var(--ease) both}
 #app.tab{animation:fade 160ms ease-out both}
+/* Cambio de pestaña con View Transitions: solo el contenido hace fundido; barra y encabezado de la app quedan fijos */
+.tabs{view-transition-name:pestanas}
+::view-transition-old(root),::view-transition-new(root){animation-duration:180ms}
+/* Abrir y cerrar deudas: deslizamiento nativo de <details> donde el navegador puede animar a "auto" */
+@supports (interpolate-size:allow-keywords){
+ .fold::details-content{interpolate-size:allow-keywords;overflow:clip;contain:layout}
+ .fold:not([open])::details-content{block-size:0}
+ @media (prefers-reduced-motion:no-preference){.fold::details-content{transition:block-size .28s var(--ease),content-visibility .28s allow-discrete,display .28s allow-discrete}}
+ .fold.opening[open]>.fb{animation:none}
+}
 .fold.opening[open]>.fb,.card.cc.opening>h3~*{animation:open 200ms var(--ease) both}
 #sync.saved{animation:fade 240ms ease-out}
 .lg{animation:fade 240ms ease-out both}
@@ -573,4 +583,4 @@ input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),
 <div id="app" tabindex="-1"></div>
 <p class="note" id="sync"></p>
 </main>
-<script src="app.js?v=69"></script></body></html>
+<script src="app.js?v=70"></script></body></html>
