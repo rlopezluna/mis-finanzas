@@ -1,7 +1,7 @@
 // Mis finanzas — lógica de la app
 // Valores iniciales: todas las cuentas nuevas empiezan vacías (las cifras personales viven solo en la nube)
 // Versión de la app. Al publicar cambios, súbela aquí, en version.json y en los ?v= de index.html
-const APPV=72;
+const APPV=73;
 const DEF={total:0,monthly:0,day:30,start:'2026-11-30',pay:[]};
 const BDEF={cIni:0,cDate:'2026-11-02',dIni:0,dDate:'2026-11-02',vIni:0,vDate:'2026-11-02',vAmt:0,gs:'2026-10-30',dayA:15,amtA:0,dayB:30,amtB:0,freq:'q',incW:0,wday:5,amtM:0,dayM:1,limP:'q',lim:null,sm:0,exp:[],sav:[],goal:0,debts:[],stm:[]};
 const isRafa=()=>!!ses&&ses.user==='rafa';
@@ -51,7 +51,11 @@ const normB=o=>{o=o&&typeof o==='object'?o:{};const b=Object.assign(cl(BDEF),{t:
  const met=m=>/^[cdev]$/.test(m)?m:'c';
  b.exp=arr(o.exp).map(x=>({n:str(x.n),a:num(x.a,0),d:sdt(x.d),m:met(x.m),c:str(x.c,40)||'Otro'}));
  b.inc=arr(o.inc).map(x=>({m:/^[de]$/.test(x.m)?x.m:'e',a:num(x.a,0),d:sdt(x.d),n:str(x.n)}));
- b.sav=arr(o.sav).map(x=>({n:str(x.n),a:num(x.a,0),d:sdt(x.d)}));
+ // Ahorro: cada aportación puede ir a una meta (g); un retiro se guarda con monto negativo. Sin meta = "Ahorro general"
+ b.sav=arr(o.sav).map(x=>({n:str(x.n),a:num(x.a,0),d:sdt(x.d),g:/^[A-Za-z0-9_-]{1,40}$/.test(String(x.g||''))?String(x.g):''}));
+ // Metas de ahorro. La meta total de versiones anteriores (goal) se convierte en "Meta de ahorro" una sola vez
+ b.goals=Array.isArray(o.goals)?arr(o.goals).slice(0,50).map(G=>({id:sid(G.id),n:str(G.n,60)||'Meta',target:Math.max(0,num(G.target,0)),date:sdt(G.date)}))
+  :(num(o.goal,0)>0?[{id:'meta',n:'Meta de ahorro',target:num(o.goal,0),date:''}]:[]);
  b.debts=arr(o.debts).map(D=>{const months=int(D.months,1,120,1);return{id:sid(D.id),n:str(D.n,80)||'Compra',price:num(D.price,0),total:num(D.total,0),months,mo:num(D.mo,0),start:sdt(D.start,today()),pay:arr(D.pay).slice(0,months).map(cpay).concat(Array.from({length:Math.max(0,months-arr(D.pay).length)},()=>({a:0,d:'',n:''})))}});
  b.methods=Array.isArray(o.methods)?[...new Set(o.methods.filter(x=>/^[vecd]$/.test(x)))]:null;if(b.methods&&!b.methods.length)b.methods=null;
  b.onb=o.onb==='pend'?'pend':'';
@@ -436,7 +440,7 @@ function toast(msg,undo){let el=$('#toast');
  el.classList.remove('show');void el.offsetWidth;el.classList.add('show');toast.ms=undo?8000:2500;clearTimeout(toast.t);toast.t=setTimeout(toast.hide,toast.ms)}
 function pulse(el,cls,ms){if(!el)return;el.classList.remove(cls);void el.offsetWidth;el.classList.add(cls);setTimeout(()=>el.classList.remove(cls),ms)}
 document.addEventListener('toggle',e=>{const d=e.target;if(d&&d.classList&&d.classList.contains('fold')&&d.open)pulse(d,'opening',450)},true);
-function greet(){const d=new Date(),h=d.getHours(),g=h<5?'Buenas noches':h<12?'Buenos días':h<19?'Buenas tardes':'Buenas noches',u=(ses&&ses.user)||'',n=u?u.charAt(0).toUpperCase()+u.slice(1).replace(/_/g,' '):'';const T={loan:'Deudas',bud:'Presupuesto',coach:'Más',stats:'Más',acct:can()?'Más':'Cuenta'}[tab];$('#hello').textContent=T||(g+(n?', '+n:''));$('#today').textContent=T?'':d.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});document.body.classList.toggle('sub',!!T)}
+function greet(){const d=new Date(),h=d.getHours(),g=h<5?'Buenas noches':h<12?'Buenos días':h<19?'Buenas tardes':'Buenas noches',u=(ses&&ses.user)||'',n=u?u.charAt(0).toUpperCase()+u.slice(1).replace(/_/g,' '):'';const T={loan:'Deudas',bud:'Presupuesto',sav:'Ahorro',coach:'Más',stats:'Más',acct:can()?'Más':'Cuenta'}[tab];$('#hello').textContent=T||(g+(n?', '+n:''));$('#today').textContent=T?'':d.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});document.body.classList.toggle('sub',!!T)}
 function render(){pendR=false;
  document.body.classList.toggle('auth',!role);
  if(!role){$('#lo').style.display='none';document.querySelector('.tabs').style.display='none';$('#sync').textContent='';$('#msg').textContent=err;
@@ -452,6 +456,7 @@ function render(){pendR=false;
  const nOk=S.pay.filter((p,i)=>status(i)==='Pagado').length;
  let h='';
  if(tab==='home'){h+=homeHtml()}
+ else if(tab==='sav'){h+=savHtml()}
  else if(tab==='loan'){
 h+=loansHtml();
  }else if(tab==='stats'){h+=moreSeg()+statsHtml()}else if(tab==='coach'){h+=moreSeg()+coachHtml()}else if(tab==='acct'){const a=accountHtml(),i=a.indexOf('<!--c1-->');h+=moreSeg()+a.slice(0,i)+appearanceHtml()+(can()?methodsCard()+atajoCard():'')+a.slice(i);if(!me)loadMe()}else{
@@ -491,15 +496,7 @@ h+=loansHtml();
   h+=`<p class="note" style="margin-top:10px">Registra gastos e ingresos desde <button type="button" class="linkb" data-tab="home">Inicio</button>.</p></div>`;
   if(!QM().length)h=h.slice(0,qh0);
   h+=`${useM('c')?stmHtml():''}
-  <div class="card" style="margin-top:12px"><h3 style="margin:0 0 4px">Ahorro</h3>
-  <b class="big" style="font-size:1.75rem">${M(svM)}</b> <span class="note">ahorrados este mes de ${M(B.sm)}</span>
-  <div class="bar" style="height:20px"><i style="width:${pa}%"></i></div>
-  <p class="note" style="margin:0 0 8px">Total acumulado: <b>${M(sv)}</b></p>
-  <div class="row"><label>Meta total (opcional)<input type="number" step="0.01" data-b="goal" value="${esc(B.goal||'')}"></label></div>`;
-  if(B.goal>0){const g=Math.min(100,sv/B.goal*100);h+=`<div class="bar"><i style="width:${g}%"></i></div><p class="note" style="margin:0 0 8px">${g.toFixed(1)}% de la meta. Faltan ${M(Math.max(0,B.goal-sv))}.</p>`}
-  if(!B.sav.length)h+=`<p class="note">Aún no hay aportaciones.</p>`;
-  B.sav.forEach((e,i)=>{h+=`<div class="ex"><span>${fmtD(e.d)} ${esc(e.n)}</span><span>${M(e.a)} <button class="btn del" data-act="sdel" data-i="${i}">Eliminar</button></span></div>`});
-  h+=`<div class="row pg" style="margin-top:12px"><input id="sn" placeholder="Nota (opcional)…">${ap('sa','',{st:100,ph:'Monto',chips:[100,500,1000]})}<button class="btn f" data-act="sadd">Agregar al ahorro</button></div></div>`;
+  <div class="card" style="margin-top:12px"><p class="hk" style="margin:0 0 2px">Ahorro</p><p class="note" style="margin:0">Llevas <b>${M(svM)}</b> este mes${B.sm>0?' de '+M(B.sm):''}. Tus metas y aportaciones están en la pestaña <button type="button" class="linkb" data-tab="sav">Ahorro</button>.</p></div>`;
  }
  const fk=focusKey();if(!animTab)$('#app').classList.remove('first','tab');$('#app').innerHTML=h;decorate();restoreFocus(fk);if(animTab){const m=animTab;animTab='';enterAnim(m)}
  const mg=document.getElementById('msg');if(mg)mg.textContent=err;
@@ -524,6 +521,11 @@ document.addEventListener('click',e=>{
  if(a==='onbm'){const k=t.dataset.v;onbSel.has(k)?onbSel.delete(k):onbSel.add(k);render();return}
  if(a==='onbok'){if(!onbSel.size)return;B.methods=MOPT.map(o=>o.k).filter(x=>onbSel.has(x));B.onb='';animTab='first';tab='home';saveB();return}
  if(a==='mtog'){toggleMethod(t.dataset.v);return}
+ if(a==='gnew'){showNewG=!showNewG;editG=null;render();const q=$('#gn');if(q)q.focus();return}
+ if(a==='gcancel'){showNewG=false;editG=null;render();return}
+ if(a==='gedit'){editG=t.dataset.g;showNewG=false;render();const q=$('#gn');if(q)q.focus();return}
+ if(a==='gdel'){delGoal(t.dataset.g);return}
+ if(a==='svkind'){svKind=t.dataset.v;render();const q=$('#sva');if(q)q.focus();return}
  if(a==='pfreq'){B.freq=t.dataset.v;saveB();return}
  if(a==='plimp'){B.limP=t.dataset.v;saveB();return}
  if(a==='hkind'){HD.kind=t.dataset.v;render();const q=$('#ha');if(q)q.focus();return}
@@ -587,7 +589,6 @@ document.addEventListener('click',e=>{
  else if(a==='ldel'&&can()){cfm='loan';render()}
  else if(a==='ldely'&&can()){const prev=cl(loanObj());if(SH.loan)stopShare('loan');normS({total:0,monthly:0,day:S.day,start:nx30(),pay:[]});cfm='';saveL();
   toast('Préstamo eliminado',()=>{normS(prev);saveL();toast('Préstamo restaurado')})}
- else if(a==='sadd'){const n=$('#sn').value.trim(),m=parseFloat($('#sa').value);if(m>0){B.sav.push({n,a:m,d:today()});saveB()}}
 });
 document.addEventListener('input',e=>{const t=e.target;if(t.id==='uiacc'||t.id==='uiacc2'){UI=normUI(Object.assign({},UI,{[t.id==='uiacc'?'acc':'acc2']:t.value}));applyUI()}});
 document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.cc>h3')){e.preventDefault();e.target.click()}});
@@ -601,6 +602,8 @@ document.addEventListener('click',e=>{
  el.value=nv;el.dispatchEvent(new Event('change',{bubbles:true}));
 });
 document.addEventListener('change',e=>{
+ if(e.target.dataset&&e.target.dataset.svmove!=null){const x=B.sav[+e.target.dataset.svmove];if(x){x.g=e.target.value;saveB();toast('Aportación movida a '+goalName(x.g))}return}
+ if(e.target.id==='svg'){svGoal=e.target.value}
  const t=e.target,v=t.type==='number'?(parseFloat(t.value)||0):t.value;
  if(t.id==='uiacc'||t.id==='uiacc2'){setUI({[t.id==='uiacc'?'acc':'acc2']:t.value},true);return}
  if(t.id==='impf'){if(t.files&&t.files[0])importData(t.files[0]);t.value='';return}
@@ -678,7 +681,60 @@ function homeSave(){const ia=$('#ha'),v=parseFloat(ia&&ia.value),k=curKind(),m=c
 document.addEventListener('input',e=>{const t=e.target;if(t.id==='ha')HD.amt=t.value;else if(t.id==='hc')HD.con=t.value;else if(t.id==='hdate')HD.d=t.value;
  else if(t.id==='hcat'){lastC=t.value;try{localStorage.setItem('lastc',lastC)}catch(x){}}});
 // Formularios reales: Enter, "Ir" del teclado y el llavero de iCloud funcionan solos; aquí solo se evita recargar la página
-document.addEventListener('submit',e=>{const f=e.target;if(f.id==='lgform'){e.preventDefault();regMode?doRegister():doLogin()}else if(f.id==='hform'){e.preventDefault();homeSave()}});
+document.addEventListener('submit',e=>{const f=e.target;if(f.id==='lgform'){e.preventDefault();regMode?doRegister():doLogin()}else if(f.id==='hform'){e.preventDefault();homeSave()}else if(f.id==='sform'){e.preventDefault();saveSav()}else if(f.id==='gform'){e.preventDefault();saveGoal(f.dataset.g||'')}});
+
+// ===================== Ahorro: metas y progreso =====================
+let showNewG=false,editG=null,svKind='a',svGoal='';
+const goalName=id=>{const G=B.goals.find(g=>g.id===id);return G?G.n:'Ahorro general'};
+const goalSaved=id=>r2(B.sav.filter(x=>(x.g||'')===id).reduce((s,x)=>s+(+x.a||0),0));
+// Progreso de una meta: lo ahorrado, porcentaje, cuánto falta y, si tiene fecha, cuánto ahorrar al mes para llegar
+function goalInfo(G){const saved=goalSaved(G.id),tg=+G.target||0,pct=tg>0?Math.max(0,Math.min(100,saved/tg*100)):0,falta=Math.max(0,r2(tg-saved)),done=tg>0&&saved>=tg-0.005,t=today();
+ let meses=0,porMes=0,vencida=false;if(G.date&&!done){if(G.date<t)vencida=true;else{meses=Math.max(1,Math.ceil(dDiff(t,G.date)/30.44));porMes=r2(falta/meses)}}
+ return{saved,pct,falta,done,meses,porMes,vencida}}
+function goalForm(G){const e=G||{n:'',target:'',date:''};
+ return `<form class="card gform" id="gform" method="post" action="#" data-g="${esc(G?G.id:'')}" aria-label="${G?'Editar meta':'Nueva meta'}"><p class="hk" style="margin:0 0 8px">${G?'Editar meta':'Nueva meta'}</p><div class="pg">
+  <div class="fl"><span>¿Para qué ahorras?</span><input id="gn" name="nombre" maxlength="60" required placeholder="Fondo de emergencia, viaje…" value="${esc(e.n)}"></div>
+  <div class="fl"><span>¿Cuánto quieres juntar?</span><input id="gt" name="objetivo" type="number" inputmode="decimal" step="0.01" min="1" required value="${esc(e.target||'')}"></div>
+  <div class="fl"><span>¿Para cuándo? <small>(opcional)</small></span><input id="gd" name="fecha" type="date" value="${esc(e.date||'')}"></div></div>
+  <div class="row" style="margin-top:12px"><button type="submit" class="btn f">Guardar meta</button><button type="button" class="btn" data-act="gcancel">Cancelar</button></div></form>`}
+function savHtml(){const t=today(),ym=t.slice(0,7),G=B.goals,tot=r2(B.sav.reduce((s,x)=>s+(+x.a||0),0)),mes=r2(B.sav.filter(x=>(x.d||'').slice(0,7)===ym).reduce((s,x)=>s+(+x.a||0),0));
+ const hechas=G.filter(g=>goalInfo(g).done).length,pm=B.sm>0?Math.max(0,Math.min(100,mes/B.sm*100)):0;
+ if(svGoal&&!G.some(g=>g.id===svGoal))svGoal='';
+ let h=`<div class="card"><p class="hk">Total ahorrado</p><p class="hv big">${M(tot)}</p>
+  <p class="note">Este mes: <b>${M(mes)}</b>${B.sm>0?' de tu meta mensual de '+M(B.sm):''}.${G.length?` Metas cumplidas: <b>${hechas} de ${G.length}</b>.`:''}</p>
+  ${B.sm>0?`<div class="bar"><i style="width:${pm}%"></i></div>`:`<p class="note">Puedes ponerte una meta mensual en <button type="button" class="linkb" data-tab="bud">Presupuesto → Plan del mes</button>.</p>`}</div>`;
+ const r=svKind==='r';
+ h+=`<form class="card" id="sform" method="post" action="#" aria-label="${r?'Registrar retiro':'Registrar ahorro'}">
+  <div class="seg" role="group" aria-label="Tipo"><button type="button" class="${r?'':'on'}" aria-pressed="${!r}" data-act="svkind" data-v="a">Ahorré</button><button type="button" class="${r?'on':''}" aria-pressed="${r}" data-act="svkind" data-v="r">Retiré</button></div>
+  <div class="pg" style="margin-top:12px">
+   <div class="fl"><span>Monto</span><input id="sva" name="monto" type="number" inputmode="decimal" step="0.01" min="0.01" required placeholder="0"></div>
+   <div class="fl"><span>${r?'¿De qué meta?':'¿Para qué meta?'}</span><select id="svg" name="meta" class="sel"><option value="">Ahorro general</option>${G.map(g=>`<option value="${esc(g.id)}"${svGoal===g.id?' selected':''}>${esc(g.n)}</option>`).join('')}</select></div>
+   <div class="fl"><span>Nota <small>(opcional)</small></span><input id="svn" name="nota" maxlength="120"></div>
+   <div class="fl"><span>Fecha</span><input id="svd" name="fecha" type="date" value="${esc(t)}"></div></div>
+  <div class="row" style="margin-top:12px"><button type="submit" class="btn f">${r?'Registrar retiro':'Guardar ahorro'}</button></div></form>`;
+ h+=`<div class="secrow"><h2 class="sec-t">Mis metas</h2><button type="button" class="btn f" data-act="gnew">+ Nueva meta</button></div>`;
+ if(showNewG)h+=goalForm(null);
+ if(!G.length&&!showNewG)h+=`<p class="note">Aún no tienes metas. Crea una para ver cuánto llevas y cuánto te falta.</p>`;
+ G.forEach(g=>{if(editG===g.id){h+=goalForm(g);return}const I=goalInfo(g);
+  const fecha=I.done?'':g.date?(I.vencida?`<span class="badm">La fecha (${fmtD(g.date)}) ya pasó.</span>`:`Para llegar el ${fmtD(g.date)} ahorra unos <b>${M(I.porMes)}</b> al mes${I.meses>1?' durante '+I.meses+' meses':''}.`):'';
+  h+=`<div class="card goal${I.done?' done':''}"><div class="gtop"><p class="gname">${esc(g.n)} ${I.done?'<span class="tg v">Cumplida</span>':''}</p><p class="gamt">${M(I.saved)} <small>de ${M(g.target)}</small></p></div>
+   <div class="bar" role="progressbar" aria-label="Progreso de ${esc(g.n)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(I.pct)}"><i style="width:${I.pct}%"></i></div>
+   <p class="note">${I.done?'¡Lo lograste!':`Te faltan <b>${M(I.falta)}</b> (llevas el ${Math.round(I.pct)}%).`} ${fecha}</p>
+   <div class="gact"><button type="button" class="btn" data-act="gedit" data-g="${esc(g.id)}">Editar</button><button type="button" class="btn del" data-act="gdel" data-g="${esc(g.id)}">Eliminar</button></div></div>`});
+ const L=B.sav.map((x,i)=>({x,i})).sort((a,b)=>(b.x.d||'').localeCompare(a.x.d||'')||b.i-a.i).slice(0,40),gen=goalSaved('');
+ h+=`<div class="secrow"><h2 class="sec-t">Movimientos</h2></div><div class="card">${gen!==0?`<p class="note" style="margin:0 0 6px">Ahorro general (sin meta): <b>${M(gen)}</b>. Puedes pasar cada aportación a una meta.</p>`:''}
+  ${L.length?L.map(({x,i})=>`<div class="ex svrow"><span><span>${fmtD(x.d)} ${esc(x.n||(x.a<0?'Retiro':'Ahorro'))}<small class="tg">${esc(goalName(x.g))}</small></span></span>
+   <span><b class="${x.a<0?'badm':'okm'}">${x.a<0?'−':'+'}${M(Math.abs(x.a))}</b>${G.length?`<select class="mini" data-svmove="${i}" aria-label="Mover a otra meta"><option value="">General</option>${G.map(g=>`<option value="${esc(g.id)}"${x.g===g.id?' selected':''}>${esc(g.n)}</option>`).join('')}</select>`:''}<button class="btn del" data-act="sdel" data-i="${i}">Eliminar</button></span></div>`).join(''):'<p class="note">Aún no hay movimientos.</p>'}</div>`;
+ return h}
+function saveSav(){const v=parseFloat(($('#sva')||{}).value);if(!(v>0))return;const r=svKind==='r',g=($('#svg')||{}).value||'',x={n:(($('#svn')||{}).value||'').trim().slice(0,120),a:r2(r?-v:v),d:sdt(($('#svd')||{}).value,today()),g};
+ svGoal=g;B.sav.push(x);saveB();toast((r?'Retiro':'Ahorro')+' de '+M(v)+(r?' de ':' en ')+goalName(g),()=>{B.sav=B.sav.filter(z=>z!==x);saveB();toast('Se quitó el movimiento')})}
+function saveGoal(id){const n=(($('#gn')||{}).value||'').trim().slice(0,60),tg=parseFloat(($('#gt')||{}).value),d=sdt(($('#gd')||{}).value,'');if(!n||!(tg>0))return;
+ if(id){const G=B.goals.find(g=>g.id===id);if(G)Object.assign(G,{n,target:r2(tg),date:d})}else B.goals.push({id:Date.now().toString(36),n,target:r2(tg),date:d});
+ showNewG=false;editG=null;saveB();toast(id?'Meta actualizada':'Meta "'+n+'" creada')}
+function delGoal(id){const G=B.goals.find(g=>g.id===id);if(!G)return;
+ pedirConfirmacion('¿Eliminar la meta "'+G.n+'"? Lo que tenía ahorrado pasa a Ahorro general.','Eliminar meta').then(ok=>{if(!ok)return;const k=B.goals.indexOf(G),movidas=B.sav.filter(x=>x.g===id);
+  B.goals=B.goals.filter(g=>g!==G);movidas.forEach(x=>{x.g=''});editG=null;saveB();
+  toast('Meta "'+G.n+'" eliminada',()=>{const N=B.goals.slice();N.splice(Math.min(k,N.length),0,G);B.goals=N;movidas.forEach(x=>{x.g=id});saveB();toast('Meta restaurada')})})}
 
 // ===================== Atajo de iPhone =====================
 // La llave solo permite AGREGAR gastos o ingresos (función registrar_por_atajo de supabase.sql). Se muestra una sola vez.
@@ -824,7 +880,10 @@ function coachTips(c){const T=[],add=(lvl,title,text,act)=>T.push({lvl,title,tex
   if(r>=1)add('bien','Cumpliste tu ahorro del mes',`Ahorraste ${M(c.svM)} de ${M(B.sm)}. Lo que ahorres de más acelera tu meta.`,'bud');
   else if(day>=16&&r<.5)add('aviso','Tu ahorro del mes va atrasado',`Llevas ${M(c.svM)} de ${M(B.sm)}. Apártalo en cuanto te paguen, antes de gastar.`,'bud')}
  else add('idea','Ponte una meta de ahorro mensual','Aunque sea poco: apartarlo en cuanto te pagan funciona mejor que ahorrar lo que sobre. Puedes definirla en Presupuesto, Plan del mes.','bud');
- if(B.goal>0&&c.sv<B.goal){const avg=Math.max(B.sm,c.svM);if(avg>0){const m=Math.ceil((B.goal-c.sv)/avg);add('idea','Tu meta de ahorro',`Te faltan ${M(B.goal-c.sv)} para tu meta de ${M(B.goal)}. Ahorrando ${M(avg)} al mes, la alcanzas en unos ${m} ${m===1?'mes':'meses'}.`,'bud')}}
+ B.goals.forEach(g=>{const I=goalInfo(g);if(I.done||!(g.target>0))return;
+  if(I.vencida)add('aviso',`${esc(g.n)}: ya pasó la fecha`,`Querías juntar ${M(g.target)} para el ${fmtD(g.date)} y llevas ${M(I.saved)}. Cambia la fecha o el monto en Ahorro.`,'sav');
+  else if(g.date)add('idea',`Tu meta: ${esc(g.n)}`,`Te faltan ${M(I.falta)}. Para llegar el ${fmtD(g.date)} ahorra unos ${M(I.porMes)} al mes.`,'sav');
+  else{const avg=Math.max(+B.sm||0,c.svM);if(avg>0){const m=Math.ceil(I.falta/avg);add('idea',`Tu meta: ${esc(g.n)}`,`Te faltan ${M(I.falta)}. Ahorrando ${M(avg)} al mes, la alcanzas en unos ${m} ${m===1?'mes':'meses'}.`,'sav')}}});
  // Fondo de emergencia
  if(c.gastosM>0){const mo=c.sv/c.gastosM;
   if(mo<1)add('idea','Arma tu colchón para emergencias',`Tus ahorros (${M(c.sv)}) cubren ${mo<.1?'menos de una semana':`unos ${Math.max(1,Math.round(mo*30))} días`} de gastos. La meta recomendada es 3 meses: ${M(c.gastosM*3)}.`,'bud');
@@ -849,7 +908,7 @@ function coachScore(c,T){const P=[];
  const v=Math.min(cap,Math.round(P.reduce((s,x)=>s+x.v,0)/P.length));
  return{v,P,label:v>=80?'Vas muy bien':v>=60?'Vas bien, con detalles':v>=40?'Hay que ajustar':'Necesita atención'}}
 function coachHtml(){const c=coachData(),T=coachTips(c),sc=coachScore(c,T);
- const ico={alerta:'!',aviso:'◷',idea:'✦',bien:'✓'},lbl={alerta:'Atiende esto',aviso:'Ojo',idea:'Idea',bien:'Bien'},go={loan:'Ver préstamo',bud:'Ir a presupuesto',stats:'Ver estadísticas',home:'Registrar un gasto'};
+ const ico={alerta:'!',aviso:'◷',idea:'✦',bien:'✓'},lbl={alerta:'Atiende esto',aviso:'Ojo',idea:'Idea',bien:'Bien'},go={loan:'Ver préstamo',bud:'Ir a presupuesto',stats:'Ver estadísticas',home:'Registrar un gasto',sav:'Ver mi ahorro'};
  const col=sc.v>=80?'var(--ok)':sc.v>=60?'var(--acc)':sc.v>=40?'var(--warn)':'var(--bad)';
  return `<div class="card coach-score"><div class="cs-top"><div class="cs-ring" style="--p:${sc.v};--c:${col}" role="img" aria-label="Salud financiera ${sc.v} de 100"><b class="big">${sc.v}</b><small>de 100</small></div>
   <div><p class="hk">Tu salud financiera</p><p class="cs-label" style="color:${col}">${sc.label}</p><p class="note">Calculado con tus pagos, tu gasto de la quincena, tus deudas y tu ahorro. Se actualiza solo.</p></div></div>
