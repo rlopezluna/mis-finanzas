@@ -204,7 +204,17 @@ Abre http://localhost:8000. Usa la misma base de datos de Supabase que la versi�
 
 ---
 
-## Novedades (versión 72): tu plan, tus reglas
+## Novedades (versión 73)
+
+- **Pestaña nueva: Ahorro.** Crea metas (nombre, monto objetivo y fecha opcional) y ve tu avance con barra, cuánto falta y el porcentaje.
+- Si la meta tiene fecha, la app te dice cuánto ahorrar al mes para llegar. Al 100 % se marca como **Cumplida**.
+- Al ahorrar eliges la meta; también puedes **retirar**. Cada movimiento se puede pasar a otra meta o eliminar.
+- Resumen arriba: total ahorrado, lo de este mes contra tu meta mensual y metas cumplidas.
+- El Coach te avisa si una meta va atrasada o ya pasó su fecha.
+- Tu meta total anterior se convirtió en la meta "Meta de ahorro". Tus aportaciones anteriores quedan en "Ahorro general".
+- El ahorro solo se anota: no se descuenta de ninguna cuenta.
+
+## Versión (versión 72): tu plan, tus reglas
 
 - En **Presupuesto → Plan del mes** eliges cada cuánto recibes tu ingreso: **semanal** (y qué día), **quincenal** (dos depósitos y sus días) o **mensual** (y qué día).
 - También eliges si tu **límite de gasto** es **quincenal** o **mensual**. Inicio muestra "Puedes gastar esta quincena" o "este mes".
