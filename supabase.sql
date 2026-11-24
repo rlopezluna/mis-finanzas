@@ -27,8 +27,28 @@ create or replace function private.sellar_hora()
 returns trigger language plpgsql set search_path = '' as $$
 declare ahora bigint := floor(extract(epoch from clock_timestamp()) * 1000);
 begin
-  if tg_op = 'UPDATE' and (old.value->>'t') ~ '^[0-9]+(\.[0-9]+)?$' then
-    ahora := greatest(ahora, floor((old.value->>'t')::numeric)::bigint + 1);
+  if tg_op = 'UPDATE' and jsonb_typeof(old.value) = 'object' then
+    if (old.value->>'t') ~ '^[0-9]+(\.[0-9]+)?$' then
+      ahora := greatest(ahora, floor((old.value->>'t')::numeric)::bigint + 1);
+    end if;
+    -- Un dispositivo con una versión vieja de la app no conoce campos nuevos (p. ej. "goals")
+    -- y los omitiría al guardar. Lo que ya estaba en la nube y no viene en el guardado, se conserva.
+    new.value := old.value || new.value;
+    -- Las versiones viejas también quitan a qué meta va cada aportación ("g"): se recupera
+    -- de la aportación igual (concepto, monto y fecha) que ya estaba guardada.
+    if jsonb_typeof(new.value->'sav') = 'array' and jsonb_typeof(old.value->'sav') = 'array' then
+      new.value := jsonb_set(new.value, '{sav}', (
+        select coalesce(jsonb_agg(
+          case when jsonb_typeof(x) <> 'object' or x ? 'g' then x
+               else x || coalesce((select jsonb_build_object('g', o->'g')
+                                   from jsonb_array_elements(old.value->'sav') o
+                                   where jsonb_typeof(o) = 'object' and o ? 'g'
+                                     and o->'n' is not distinct from x->'n' and o->'a' = x->'a'
+                                     and o->'d' is not distinct from x->'d'
+                                   limit 1), '{}'::jsonb)
+          end order by i), '[]'::jsonb)
+        from jsonb_array_elements(new.value->'sav') with ordinality s(x, i)));
+    end if;
   end if;
   new.value := jsonb_set(new.value, '{t}', to_jsonb(ahora));
   new.updated_at := now();

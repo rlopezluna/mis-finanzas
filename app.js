@@ -1,7 +1,7 @@
 // Mis finanzas — lógica de la app
 // Valores iniciales: todas las cuentas nuevas empiezan vacías (las cifras personales viven solo en la nube)
 // Versión de la app. Al publicar cambios, súbela aquí, en version.json y en los ?v= de index.html
-const APPV=73;
+const APPV=74;
 const DEF={total:0,monthly:0,day:30,start:'2026-11-30',pay:[]};
 const BDEF={cIni:0,cDate:'2026-11-02',dIni:0,dDate:'2026-11-02',vIni:0,vDate:'2026-11-02',vAmt:0,gs:'2026-10-30',dayA:15,amtA:0,dayB:30,amtB:0,freq:'q',incW:0,wday:5,amtM:0,dayM:1,limP:'q',lim:null,sm:0,exp:[],sav:[],goal:0,debts:[],stm:[]};
 const isRafa=()=>!!ses&&ses.user==='rafa';
@@ -37,8 +37,13 @@ const sid=v=>String(v==null?'':v).replace(/[^a-z0-9_-]/gi,'').slice(0,40)||Math.
 const sdt=(v,d)=>/^\d{4}-\d{2}-\d{2}$/.test(String(v||''))?String(v):(d===undefined?'':d);
 const str=(v,max)=>String(v==null?'':v).slice(0,max||300);
 const arr=v=>Array.isArray(v)?v.filter(x=>x&&typeof x==='object'):[];
-const cpay=p=>({a:num(p.a,0),d:sdt(p.d),n:str(p.n)});
-const normS=o=>{o=o&&typeof o==='object'?o:{};S={t:num(o.t,0),total:num(o.total,DEF.total),monthly:num(o.monthly,DEF.monthly),day:int(o.day,1,31,30),start:sdt(o.start,DEF.start),pay:arr(o.pay).slice(0,150).map(cpay)};return fixPay()};
+// Compatibilidad hacia adelante: lo que esta versión no conoce se conserva tal cual al guardar,
+// para que un dispositivo con una versión vieja no borre datos de funciones más nuevas (p. ej. metas).
+const BAD_K=new Set(['__proto__','constructor','prototype']);
+const keep=(x,o)=>{const r={};if(x&&typeof x==='object')Object.keys(x).forEach(k=>{if(!(k in o)&&!BAD_K.has(k))r[k]=x[k]});return Object.assign(r,o)};
+const carry=(o,b)=>{Object.keys(o).forEach(k=>{if(!(k in b)&&!BAD_K.has(k))b[k]=o[k]});return b};
+const cpay=p=>keep(p,{a:num(p.a,0),d:sdt(p.d),n:str(p.n)});
+const normS=o=>{o=o&&typeof o==='object'?o:{};S={t:num(o.t,0),total:num(o.total,DEF.total),monthly:num(o.monthly,DEF.monthly),day:int(o.day,1,31,30),start:sdt(o.start,DEF.start),pay:arr(o.pay).slice(0,150).map(cpay)};carry(o,S);return fixPay()};
 const normB=o=>{o=o&&typeof o==='object'?o:{};const b=Object.assign(cl(BDEF),{t:num(o.t,0)});
  ['cIni','dIni','vIni','vAmt','amtA','amtB','sm','goal'].forEach(k=>{b[k]=num(o[k],BDEF[k])});
  b.dayA=int(o.dayA,1,31,BDEF.dayA);b.dayB=int(o.dayB,1,31,BDEF.dayB);
@@ -49,19 +54,19 @@ const normB=o=>{o=o&&typeof o==='object'?o:{};const b=Object.assign(cl(BDEF),{t:
  b.lim=o.lim!=null&&o.lim!==''&&isFinite(parseFloat(o.lim))?num(o.lim,null):null;
  ['cDate','dDate','vDate','gs'].forEach(k=>{b[k]=sdt(o[k],BDEF[k])});
  const met=m=>/^[cdev]$/.test(m)?m:'c';
- b.exp=arr(o.exp).map(x=>({n:str(x.n),a:num(x.a,0),d:sdt(x.d),m:met(x.m),c:str(x.c,40)||'Otro'}));
- b.inc=arr(o.inc).map(x=>({m:/^[de]$/.test(x.m)?x.m:'e',a:num(x.a,0),d:sdt(x.d),n:str(x.n)}));
+ b.exp=arr(o.exp).map(x=>keep(x,{n:str(x.n),a:num(x.a,0),d:sdt(x.d),m:met(x.m),c:str(x.c,40)||'Otro'}));
+ b.inc=arr(o.inc).map(x=>keep(x,{m:/^[de]$/.test(x.m)?x.m:'e',a:num(x.a,0),d:sdt(x.d),n:str(x.n)}));
  // Ahorro: cada aportación puede ir a una meta (g); un retiro se guarda con monto negativo. Sin meta = "Ahorro general"
- b.sav=arr(o.sav).map(x=>({n:str(x.n),a:num(x.a,0),d:sdt(x.d),g:/^[A-Za-z0-9_-]{1,40}$/.test(String(x.g||''))?String(x.g):''}));
+ b.sav=arr(o.sav).map(x=>keep(x,{n:str(x.n),a:num(x.a,0),d:sdt(x.d),g:/^[A-Za-z0-9_-]{1,40}$/.test(String(x.g||''))?String(x.g):''}));
  // Metas de ahorro. La meta total de versiones anteriores (goal) se convierte en "Meta de ahorro" una sola vez
- b.goals=Array.isArray(o.goals)?arr(o.goals).slice(0,50).map(G=>({id:sid(G.id),n:str(G.n,60)||'Meta',target:Math.max(0,num(G.target,0)),date:sdt(G.date)}))
+ b.goals=Array.isArray(o.goals)?arr(o.goals).slice(0,50).map(G=>keep(G,{id:sid(G.id),n:str(G.n,60)||'Meta',target:Math.max(0,num(G.target,0)),date:sdt(G.date)}))
   :(num(o.goal,0)>0?[{id:'meta',n:'Meta de ahorro',target:num(o.goal,0),date:''}]:[]);
- b.debts=arr(o.debts).map(D=>{const months=int(D.months,1,120,1);return{id:sid(D.id),n:str(D.n,80)||'Compra',price:num(D.price,0),total:num(D.total,0),months,mo:num(D.mo,0),start:sdt(D.start,today()),pay:arr(D.pay).slice(0,months).map(cpay).concat(Array.from({length:Math.max(0,months-arr(D.pay).length)},()=>({a:0,d:'',n:''})))}});
+ b.debts=arr(o.debts).map(D=>{const months=int(D.months,1,120,1);return keep(D,{id:sid(D.id),n:str(D.n,80)||'Compra',price:num(D.price,0),total:num(D.total,0),months,mo:num(D.mo,0),start:sdt(D.start,today()),pay:arr(D.pay).slice(0,months).map(cpay).concat(Array.from({length:Math.max(0,months-arr(D.pay).length)},()=>({a:0,d:'',n:''})))})});
  b.methods=Array.isArray(o.methods)?[...new Set(o.methods.filter(x=>/^[vecd]$/.test(x)))]:null;if(b.methods&&!b.methods.length)b.methods=null;
  b.onb=o.onb==='pend'?'pend':'';
  b.ui=o.ui&&typeof o.ui==='object'?{mode:str(o.ui.mode,5),pal:str(o.ui.pal,12),acc:str(o.ui.acc,7)||null,acc2:str(o.ui.acc2,7)||null}:null;
- b.stm=arr(o.stm).map(x=>({id:sid(x.id),c:str(x.c,40),m:/^\d{4}-\d{2}$/.test(String(x.m||''))?x.m:'',sal:num(x.sal,0),min:num(x.min,0),l:sdt(x.l),n:str(x.n),pd:sdt(x.pd)}));
- return b};
+ b.stm=arr(o.stm).map(x=>keep(x,{id:sid(x.id),c:str(x.c,40),m:/^\d{4}-\d{2}$/.test(String(x.m||''))?x.m:'',sal:num(x.sal,0),min:num(x.min,0),l:sdt(x.l),n:str(x.n),pd:sdt(x.pd)}));
+ return carry(o,b)};
 const mkD=(y,m0,d)=>{const x=new Date(y,m0,1),dm=new Date(x.getFullYear(),x.getMonth()+1,0).getDate();return x.getFullYear()+'-'+pad(x.getMonth()+1)+'-'+pad(Math.min(d,dm))};
 const due=n=>{const [y,m]=S.start.split('-').map(Number);return mkD(y,m-1+n-1,S.day||30)};
 const fmtD=s=>s?esc(String(s).split('-').reverse().join('/')):'';
